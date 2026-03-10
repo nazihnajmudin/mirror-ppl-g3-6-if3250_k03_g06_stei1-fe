@@ -23,8 +23,8 @@ build-job:
     expire_in: 1 hour
     paths:
       - .next/
-      - node_modules/
       - public/
+      - package.json
 
 run_tests:
   stage: test
