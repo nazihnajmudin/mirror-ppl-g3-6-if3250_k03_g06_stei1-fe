@@ -4,7 +4,9 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/app
+      - .:/app          
+      - /app/node_modules  
+      - /app/.next
     environment:
       - DATABASE_URL=postgresql://admin:password123@postgres-db:5432/akreditasi_stei
 
