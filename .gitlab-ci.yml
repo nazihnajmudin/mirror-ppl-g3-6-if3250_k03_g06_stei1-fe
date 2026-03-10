@@ -7,6 +7,10 @@ stages:
   - test
   - deploy
 
+cache:
+  paths:
+    - node_modules/
+
 build-job:
   stage: build
   image: node:20-alpine
@@ -21,7 +25,6 @@ build-job:
       - .next/
       - node_modules/
       - public/
-      - package.json
 
 run_tests:
   stage: test
