@@ -36,9 +36,9 @@ run_tests:
 
 deploy-job:
   stage: deploy
-  image: docker:28.0.0
+  image: docker:24.0.5
   services:
-    - docker:28.0.0-dind
+    - docker:24.0.5-dind
   tags: 
     - docker
   environment: production
