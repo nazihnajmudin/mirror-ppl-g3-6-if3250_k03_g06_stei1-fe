@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
+import { Header } from "@/components/layout/header"
 
 import {
   Avatar,
@@ -89,6 +90,7 @@ export default function ManajemenAkunPage() {
       
       {/* Main Content */}
       <main className="flex-grow md:ml-[240px] p-8 min-h-screen">
+        <Header />
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Manajemen Akun</h1>
