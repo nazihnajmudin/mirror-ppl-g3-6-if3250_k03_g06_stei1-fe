@@ -10,19 +10,23 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import apiClient from "@/lib/api-client"
 
 const loginSchema = z.object({
-  username: z.string().min(1, { message: "Username harus diisi" }),
+  email: z.string().email(),
   password: z.string().min(1, { message: "Password harus diisi" }),
 });
 
 export default function LoginPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -31,27 +35,39 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      /**
-       * TODO: LOGIN API INTEGRATION
-       *
-       * 1. Panggil API Login (e.g., POST /api/auth/login) menggunakan apiClient (src/lib/api-client.ts)
-       * 2. Simpan Access Token ke Local Storage atau Cookies
-       * 3. Redirect ke halaman dashboard
-       * 4. Tangani error jika login gagal
-       */
+      const response = await apiClient.post("/auth/login", values);
 
-      console.log("Login data submitted:", values);
+      const token = response.data?.data?.token || response.data?.accessToken || response.data?.token;
+      
+      if (token) {
+        localStorage.setItem("accessToken", token);
+        
+        router.push("/dashboard");
+        
+        router.refresh();
+      } else {
+        throw new Error("Format response server tidak sesuai (Token Missing).");
+      }
 
-      // Simulasi delay API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Simulasi pesan error (untuk demo UI saat ini)
-      form.setError("root", { message: "Login API call placeholder. Check code comments!" });
-      form.setError("username", { type: "manual", message: "" });
-      form.setError("password", { type: "manual", message: "" });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Login Error:", error);
-      form.setError("root", { message: "Terjadi kesalahan sistem. Silakan coba lagi." });
+
+      if (axios.isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        const errorMessage = error.response?.data?.message || "Terjadi kesalahan saat login.";
+
+        if (statusCode === 401) {
+          form.setError("root", { message: "Email atau password salah." });
+        } else if (statusCode === 403) {
+          form.setError("root", { message: "Akun Anda tidak memiliki akses ke portal ini." });
+        } else {
+          form.setError("root", { message: errorMessage });
+        }
+      } else if (error instanceof Error) {
+        form.setError("root", { message: error.message });
+      } else {
+        form.setError("root", { message: "Terjadi kesalahan ketika login." });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -77,13 +93,14 @@ export default function LoginPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-medium text-gray-700">Username</FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="username"
+                      type="email"
+                      placeholder="someone@email.com"
                       disabled={isLoading}
                       className={`h-11 rounded-lg ${hasError ? "bg-[#FEF2F2] border-[#EF4444] text-[#EF4444] focus-visible:ring-[#EF4444]" : "bg-[#F3F4F6] border-gray-200 focus-visible:ring-gray-300"}`}
                       {...field}
