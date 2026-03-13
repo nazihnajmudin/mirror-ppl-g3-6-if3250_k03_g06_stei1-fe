@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Sidebar } from "@/components/layout/sidebar"
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -77,7 +78,7 @@ export default function TambahPenggunaPage() {
     <div className="min-h-screen flex bg-[#F9FAFB]">
       {/* Sidebar Placeholder */}
       <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
-        Sidebar Placeholder
+        <Sidebar />
       </div>
       
       {/* Main Content */}

@@ -9,15 +9,15 @@ export default function DashboardLayout({
     return (
     <div className="flex min-h-screen bg-gray-50">
         {/* Sidebar statis di kiri */}
-        <Sidebar />
-        
+        <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
+          <Sidebar/>
+        </div>
+
         {/* Area konten utama */}
-        <div className="flex-1 flex flex-col">
-        <main className="flex-1 overflow-y-auto px-8 py-6">
+        <main className="flex-grow md:ml-[240px] p-8 min-h-screen">
             <Header />
             {children}
         </main>
-        </div>
     </div>
     );
 }
