@@ -1,20 +1,13 @@
 services:
   frontend:
     build: .
+    container_name: stei_akreditasi_fe
+    restart: always
     ports:
       - "3000:3000"
     volumes:
-      - .:/app          
-      - /app/node_modules  
+      - .:/app
+      - /app/node_modules
       - /app/.next
     environment:
-      - DATABASE_URL=postgresql://admin:password123@postgres-db:5432/akreditasi_stei
-
-  postgres-db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: akreditasi_stei
-    ports:
-      - "5432:5432"
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
