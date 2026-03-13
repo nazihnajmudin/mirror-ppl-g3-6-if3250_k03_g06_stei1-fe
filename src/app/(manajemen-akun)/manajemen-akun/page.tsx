@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { Header } from "@/components/layout/header"
+import { Sidebar } from "@/components/layout/sidebar"
 
 import {
   Avatar,
@@ -85,7 +86,7 @@ export default function ManajemenAkunPage() {
     <div className="min-h-screen flex bg-[#F9FAFB]">
       {/* Sidebar Placeholder: To be implemented by friend */}
       <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
-        Sidebar Placeholder
+        <Sidebar/>
       </div>
       
       {/* Main Content */}
