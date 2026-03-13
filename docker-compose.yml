@@ -1,0 +1,13 @@
+services:
+  frontend:
+    build: .
+    container_name: stei_akreditasi_fe
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
