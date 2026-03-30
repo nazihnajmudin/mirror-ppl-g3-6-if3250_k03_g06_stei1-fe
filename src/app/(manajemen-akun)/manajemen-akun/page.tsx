@@ -43,7 +43,7 @@ const mockUsers: UserData[] = [
     id: "1",
     name: "John Michael",
     email: "john@mail.com",
-    role: "Admin Institusi",
+    role: "Super Admin",
     access: "Semua Prodi",
     status: "Online",
     prodi: "-",
