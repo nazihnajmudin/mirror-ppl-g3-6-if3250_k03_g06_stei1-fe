@@ -38,9 +38,9 @@ const kriteria = [
 ]
 
 const anggotaList = [
-  { nama: "Siti", initials: "SI" },
-  { nama: "Agus", initials: "AG" },
-  { nama: "Kevin", initials: "KE" },
+  { name: "Siti", initials: "SI" },
+  { name: "Agus", initials: "AG" },
+  { name: "Kevin", initials: "KE" },
 ]
 
 interface Penugasan {
@@ -73,7 +73,7 @@ export default function PenugasanPage() {
 
   const handleTugaskan = () => {
     if (!selectedAnggota || selectedKriteria.length === 0) return
-    const anggota = anggotaList.find((a) => a.nama === selectedAnggota)
+    const anggota = anggotaList.find((a) => a.name === selectedAnggota)
     if (!anggota) return
 
     const today = new Date()
@@ -83,7 +83,7 @@ export default function PenugasanPage() {
       .filter((k) => !penugasan.some((p) => p.anggota === selectedAnggota && p.kriteria === k))
       .map((k) => ({
         id: `${Date.now()}-${k}`,
-        anggota: anggota.nama,
+        anggota: anggota.name,
         initials: anggota.initials,
         kriteria: k,
         label: kriteria.find((kr) => kr.id === k)?.label ?? "",
@@ -100,14 +100,14 @@ export default function PenugasanPage() {
 
   const penugasanByAnggota = anggotaList.map((a) => ({
     ...a,
-    kriteria: penugasan.filter((p) => p.anggota === a.nama).map((p) => p.kriteria),
-    tanggal: penugasan.find((p) => p.anggota === a.nama)?.tanggal ?? "-",
+    kriteria: penugasan.filter((p) => p.anggota === a.name).map((p) => p.kriteria),
+    tanggal: penugasan.find((p) => p.anggota === a.name)?.tanggal ?? "-",
   }))
 
   const filteredRows =
     filterAnggota === "Semua Anggota"
       ? penugasanByAnggota.filter((a) => a.kriteria.length > 0)
-      : penugasanByAnggota.filter((a) => a.nama === filterAnggota && a.kriteria.length > 0)
+      : penugasanByAnggota.filter((a) => a.name === filterAnggota && a.kriteria.length > 0)
 
   return (
     <div className="min-h-screen flex bg-[#F9FAFB]">
@@ -176,7 +176,7 @@ export default function PenugasanPage() {
                 >
                   <option value="">-- Pilih anggota --</option>
                   {anggotaList.map((a) => (
-                    <option key={a.nama} value={a.nama}>{a.nama}</option>
+                    <option key={a.name} value={a.name}>{a.name}</option>
                   ))}
                 </select>
               </div>
@@ -222,7 +222,7 @@ export default function PenugasanPage() {
               >
                 <option>Semua Anggota</option>
                 {anggotaList.map((a) => (
-                  <option key={a.nama}>{a.nama}</option>
+                  <option key={a.name}>{a.name}</option>
                 ))}
               </select>
             </CardHeader>
@@ -244,7 +244,7 @@ export default function PenugasanPage() {
                     </TableRow>
                   ) : (
                     filteredRows.map((row) => (
-                      <TableRow key={row.nama} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
+                      <TableRow key={row.name} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
                         <TableCell className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8 border border-gray-100 shadow-sm">
@@ -252,7 +252,7 @@ export default function PenugasanPage() {
                                 {row.initials}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-[13px] font-semibold text-gray-900">{row.nama}</span>
+                            <span className="text-[13px] font-semibold text-gray-900">{row.name}</span>
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-4">
@@ -282,16 +282,16 @@ export default function PenugasanPage() {
           <CardContent className="px-6 py-5">
             <div className="grid grid-cols-3 gap-4">
               {anggotaList.map((a) => {
-                const myKriteria = penugasan.filter((p) => p.anggota === a.nama)
+                const myKriteria = penugasan.filter((p) => p.anggota === a.name)
                 return (
-                  <div key={a.nama} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+                  <div key={a.name} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
                     <div className="flex items-center gap-2.5 mb-3">
                       <Avatar className="w-8 h-8 border border-gray-200">
                         <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
                           {a.initials}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-bold text-gray-900">{a.nama}</span>
+                      <span className="text-sm font-bold text-gray-900">{a.name}</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-1">Kriteria ditangani:</p>
                     <p className={`text-2xl font-bold mb-2 ${myKriteria.length === 0 ? "text-red-500" : "text-gray-900"}`}>

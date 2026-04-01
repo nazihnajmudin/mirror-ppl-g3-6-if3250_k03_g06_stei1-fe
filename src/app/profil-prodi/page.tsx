@@ -37,33 +37,33 @@ import {
 
 
 interface ProdiData {
-  nama: string
+  fullname: string
   akreditasi: string
-  jenjang: string
-  berlakuSampai: string
+  degree: string
+  endDate: string
   namaKaprodi: string
   visi: string
   misi: string[]
   skorAkreditasi: number
   targetSkor: number
-  sertifikatUrl: string
+  certificateUrl: string
 }
 
 interface TimProdiMember {
   id: string
-  nama: string
+  name: string
   email: string
   role: string
   indikator: string[]
-  status: "Aktif" | "Tidak Aktif"
+  isActive: boolean
   initials: string
 }
 
 const initialProdiData: ProdiData = {
-  nama: "Teknik Informatika",
+  fullname: "Teknik Informatika",
   akreditasi: "Unggul",
-  jenjang: "Sarjana (S1)",
-  berlakuSampai: "28 November 2027",
+  degree: "Sarjana (S1)",
+  endDate: "28 November 2027",
   namaKaprodi: "Michael Levi",
   visi: "To be a higher educational institution of international repute in science and technology, particularly in the field of informatics and computing, that contributes significantly to national development.",
   misi: [
@@ -73,13 +73,13 @@ const initialProdiData: ProdiData = {
   ],
   skorAkreditasi: 350,
   targetSkor: 500,
-  sertifikatUrl: "https://banpt.or.id/sertifikat/sample.pdf",
+  certificateUrl: "https://banpt.or.id/sertifikat/sample.pdf",
 }
 
 const initialTimProdi: TimProdiMember[] = [
-  { id: "1", nama: "Siti", email: "siti@itb.ac.id", role: "Tim Prodi", indikator: ["K1", "K2"], status: "Aktif", initials: "SI" },
-  { id: "2", nama: "Agus", email: "agus@itb.ac.id", role: "Tim Prodi", indikator: ["K3", "K4"], status: "Aktif", initials: "AG" },
-  { id: "3", nama: "Kevin", email: "kevin@itb.ac.id", role: "Tim Prodi", indikator: ["K5", "K6"], status: "Tidak Aktif", initials: "KE" },
+  { id: "1", name: "Siti", email: "siti@itb.ac.id", role: "TIM_PRODI", indikator: ["K1", "K2"], isActive: true, initials: "SI" },
+  { id: "2", name: "Agus", email: "agus@itb.ac.id", role: "TIM_PRODI", indikator: ["K3", "K4"], isActive: true, initials: "AG" },
+  { id: "3", name: "Kevin", email: "kevin@itb.ac.id", role: "TIM_PRODI", indikator: ["K5", "K6"], isActive: false, initials: "KE" },
 ]
 
 export default function ProfilProdiPage() {
@@ -93,8 +93,8 @@ export default function ProfilProdiPage() {
   const [showTambahAnggota, setShowTambahAnggota] = React.useState(false)
   const [newNama, setNewNama] = React.useState("")
   const [newEmail, setNewEmail] = React.useState("")
-  const [newRole, setNewRole] = React.useState("Tim Prodi")
-  const [newStatus, setNewStatus] = React.useState<"Aktif" | "Tidak Aktif">("Aktif")
+  const [newRole, setNewRole] = React.useState("TIM_PRODI")
+  const [newIsActive, setNewIsActive] = React.useState(true)
   const openEditProfil = () => {
     setEditForm(prodiData)
     setMisiText(prodiData.misi.join("\n"))
@@ -116,8 +116,8 @@ export default function ProfilProdiPage() {
   const openTambahAnggota = () => {
     setNewNama("")
     setNewEmail("")
-    setNewRole("Tim Prodi")
-    setNewStatus("Aktif")
+    setNewRole("TIM_PRODI")
+    setNewIsActive(true)
     setShowTambahAnggota(true)
   }
 
@@ -128,11 +128,11 @@ export default function ProfilProdiPage() {
       ...prev,
       {
         id: Date.now().toString(),
-        nama: newNama.trim(),
+        name: newNama.trim(),
         email: newEmail.trim(),
         role: newRole,
         indikator: [],
-        status: newStatus,
+        isActive: newIsActive,
         initials,
       },
     ])
@@ -161,24 +161,24 @@ export default function ProfilProdiPage() {
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-gray-900">{prodiData.nama}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{prodiData.fullname}</h1>
                   <Badge className="bg-green-50 text-green-600 border-none shadow-none rounded-md px-2.5 py-0.5 text-xs font-bold">
                     {prodiData.akreditasi}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                  <span>{prodiData.jenjang}</span>
+                  <span>{prodiData.degree}</span>
                   <span>·</span>
-                  {prodiData.sertifikatUrl ? (
+                  {prodiData.certificateUrl ? (
                     <button
                       onClick={() => setShowSertifikat(true)}
                       className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition-colors font-medium"
                     >
-                      Berlaku s.d. {prodiData.berlakuSampai}
+                      Berlaku s.d. {prodiData.endDate}
                       <ExternalLink className="w-3 h-3" />
                     </button>
                   ) : (
-                    <span>Berlaku s.d. {prodiData.berlakuSampai}</span>
+                    <span>Berlaku s.d. {prodiData.endDate}</span>
                   )}
                 </div>
               </div>
@@ -254,9 +254,9 @@ export default function ProfilProdiPage() {
                   <div className="space-y-1.5">
                     <p className="text-xs text-gray-400 uppercase tracking-wider">Nama Program Studi</p>
                     {isEditing ? (
-                      <Input value={editForm.nama} onChange={(e) => setEditForm((f) => ({ ...f, nama: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
+                      <Input value={editForm.fullname} onChange={(e) => setEditForm((f) => ({ ...f, fullname: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">{prodiData.nama}</p>
+                      <p className="text-sm font-semibold text-gray-900">{prodiData.fullname}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
@@ -270,9 +270,9 @@ export default function ProfilProdiPage() {
                   <div className="space-y-1.5">
                     <p className="text-xs text-gray-400 uppercase tracking-wider">Jenjang</p>
                     {isEditing ? (
-                      <Input value={editForm.jenjang} onChange={(e) => setEditForm((f) => ({ ...f, jenjang: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
+                      <Input value={editForm.degree} onChange={(e) => setEditForm((f) => ({ ...f, degree: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">{prodiData.jenjang}</p>
+                      <p className="text-sm font-semibold text-gray-900">{prodiData.degree}</p>
                     )}
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export default function ProfilProdiPage() {
                           <Avatar className="w-9 h-9 border border-gray-100 shadow-sm">
                             <AvatarFallback className="bg-blue-50 text-blue-600 text-[12px] font-bold">{member.initials}</AvatarFallback>
                           </Avatar>
-                          <span className="text-[14px] font-semibold text-gray-900">{member.nama}</span>
+                          <span className="text-[14px] font-semibold text-gray-900">{member.name}</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-[13px] text-gray-500">{member.email}</TableCell>
@@ -405,10 +405,10 @@ export default function ProfilProdiPage() {
                         <Badge
                           variant="secondary"
                           className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold shadow-none border-none ${
-                            member.status === "Aktif" ? "bg-green-50 text-green-600" : "bg-red-100 text-red-500"
+                            member.isActive ? "bg-green-50 text-green-600" : "bg-red-100 text-red-500"
                           }`}
                         >
-                          {member.status}
+                          {member.isActive ? "Aktif" : "Tidak Aktif"}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
@@ -435,7 +435,7 @@ export default function ProfilProdiPage() {
         <DialogContent className="max-w-2xl bg-white">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-gray-900">
-              Sertifikat Akreditasi — {prodiData.nama}
+              Sertifikat Akreditasi — {prodiData.fullname}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-2 space-y-4">
@@ -448,13 +448,13 @@ export default function ProfilProdiPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Berlaku Sampai</p>
-                <p className="text-sm font-semibold text-gray-900">{prodiData.berlakuSampai}</p>
+                <p className="text-sm font-semibold text-gray-900">{prodiData.endDate}</p>
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 flex flex-col items-center justify-center py-12 gap-3">
               <p className="text-sm text-gray-500">Sertifikat akreditasi tersedia di tautan berikut:</p>
               <a
-                href={prodiData.sertifikatUrl}
+                href={prodiData.certificateUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
@@ -500,29 +500,34 @@ export default function ProfilProdiPage() {
                 onChange={(e) => setNewRole(e.target.value)}
                 className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
               >
-                <option>Tim Prodi</option>
-                <option>Kaprodi</option>
-                <option>Dosen</option>
+                <option value="TIM_PRODI">Tim Prodi</option>
+                <option value="KAPRODI">Kaprodi</option>
               </select>
             </div>
-
 
             <div className="space-y-2">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</Label>
               <div className="flex gap-4">
-                {(["Aktif", "Tidak Aktif"] as const).map((s) => (
-                  <label key={s} className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                    <input
-                      type="radio"
-                      name="status"
-                      value={s}
-                      checked={newStatus === s}
-                      onChange={() => setNewStatus(s)}
-                      className="h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-400 cursor-pointer"
-                    />
-                    {s}
-                  </label>
-                ))}
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="status"
+                    checked={newIsActive === true}
+                    onChange={() => setNewIsActive(true)}
+                    className="h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-400 cursor-pointer"
+                  />
+                  Aktif
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="status"
+                    checked={newIsActive === false}
+                    onChange={() => setNewIsActive(false)}
+                    className="h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-400 cursor-pointer"
+                  />
+                  Tidak Aktif
+                </label>
               </div>
             </div>
           </div>
