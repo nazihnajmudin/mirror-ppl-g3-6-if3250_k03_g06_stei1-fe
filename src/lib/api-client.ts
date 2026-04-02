@@ -21,7 +21,12 @@ apiClient.interceptors.request.use((config) => {
     localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
   }
 
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log("[API Client] Authorization header set with token");
+  } else {
+    console.log("[API Client] No token found in localStorage!");
+  }
   return config;
 });
 
