@@ -9,7 +9,7 @@ export function Header() {
       <div className="flex items-center gap-3">
         <div className="flex flex-col items-end">
           <span className="text-[14px] font-bold text-gray-900 leading-tight">John Michael</span>
-          <span className="text-[13px] text-gray-500">Admin Institusi</span>
+          <span className="text-[13px] text-gray-500">Kaprodi</span>
         </div>
         <Avatar className="w-10 h-10 border border-gray-100 shadow-sm">
           <AvatarImage src="" alt="Profile" />

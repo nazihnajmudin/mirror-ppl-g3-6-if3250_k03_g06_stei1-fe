@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard},
+    { name: 'LKPS', href: '/dashboard/lkps', icon: Database},
     { name: 'Data Kuantitatif Institusi', href: '#', icon: Database},
     { name: 'Program Studi', href: '#', icon: BookOpen},
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
