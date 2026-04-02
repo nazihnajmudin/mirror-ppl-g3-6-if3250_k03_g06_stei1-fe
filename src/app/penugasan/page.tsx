@@ -24,6 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { addPenugasan } from "@/lib/api-prodi"
+import { ProdiAssignment } from "@/types/api.types"
 
 const kriteria = [
   { id: "K1", label: "Visi, Misi, Tujuan & Strategi" },
@@ -71,29 +73,38 @@ export default function PenugasanPage() {
     )
   }
 
-  const handleTugaskan = () => {
-    if (!selectedAnggota || selectedKriteria.length === 0) return
-    const anggota = anggotaList.find((a) => a.name === selectedAnggota)
-    if (!anggota) return
+  const handleTugaskan = async () => {
+    if (!selectedAnggota || selectedKriteria.length === 0) {
+      alert("Pilih anggota dan minimal satu kriteria!");
+      return;
+    }
 
-    const today = new Date()
-    const tanggal = today.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+    try {
+      const result = await addPenugasan({
+        userId: selectedAnggota,
+        prodiId: "1",
+        kriteriaIds: selectedKriteria,
+      });
 
-    const newEntries: Penugasan[] = selectedKriteria
-      .filter((k) => !penugasan.some((p) => p.anggota === selectedAnggota && p.kriteria === k))
-      .map((k) => ({
-        id: `${Date.now()}-${k}`,
-        anggota: anggota.name,
-        initials: anggota.initials,
-        kriteria: k,
-        label: kriteria.find((kr) => kr.id === k)?.label ?? "",
-        tanggal,
-      }))
+      setPenugasan((prev: any) => {
+        const existingIdx = prev.findIndex(p => p.id === result.userId);
+        
+        if (existingIdx > -1) {
+          const updated = [...prev];
+          updated[existingIdx] = result;
+          return updated;
+        }
+        
+        return [result, ...prev];
+      });
 
-    setPenugasan((prev) => [...prev, ...newEntries])
-    setSelectedAnggota("")
-    setSelectedKriteria([])
-  }
+      setSelectedKriteria([]);
+      setSelectedAnggota("");
+
+    } catch (error: unknown) {
+      console.error((error as Error).message);
+    }
+  };
 
   const assignedKriteria = [...new Set(penugasan.map((p) => p.kriteria))]
   const unassignedKriteria = kriteria.filter((k) => !assignedKriteria.includes(k.id))

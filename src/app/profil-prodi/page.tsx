@@ -35,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { addProdiMember, deleteProdiMember } from "@/lib/api-prodi"
 
 interface ProdiData {
   fullname: string
@@ -121,27 +122,60 @@ export default function ProfilProdiPage() {
     setShowTambahAnggota(true)
   }
 
-  const handleTambahAnggota = () => {
-    if (!newNama.trim() || !newEmail.trim()) return
-    const initials = newNama.trim().split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-    setTimProdi((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
+  const handleTambahAnggota = async () => {
+    if (!newNama.trim() || !newEmail.trim()) return;
+
+    try {
+      const savedUser = await addProdiMember({
         name: newNama.trim(),
         email: newEmail.trim(),
-        role: newRole,
-        indikator: [],
-        isActive: newIsActive,
-        initials,
-      },
-    ])
-    setShowTambahAnggota(false)
-  }
+        role: newRole, 
+        password: "password123"
+      });
 
-  const handleHapusAnggota = (id: string) => {
-    setTimProdi((prev) => prev.filter((m) => m.id !== id))
-  }
+      const initials = (savedUser.nama || "")
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+
+      setTimProdi((prev) => [
+        ...prev,
+        {
+          id: savedUser.id,
+          name: savedUser.nama,
+          email: savedUser.email,
+          role: savedUser.role,
+          indikator: [], 
+          isActive: true,
+          initials,
+        },
+      ]);
+
+      setShowTambahAnggota(false);
+      setNewNama("");
+      setNewEmail("");
+
+    } catch (error: unknown) {
+      console.error("Gagal menambah anggota:", (error as Error).message);
+    }
+  };
+
+  const handleHapusAnggota = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus anggota ini?")) return;
+
+    try {
+      await deleteProdiMember(id);
+
+      setTimProdi((prev) => prev.filter((m) => m.id !== id));
+      
+      console.log("Anggota berhasil dihapus dari database");
+      
+    } catch (error: unknown) {
+      console.error("Gagal menghapus:", (error as Error).message);
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-[#F9FAFB]">
