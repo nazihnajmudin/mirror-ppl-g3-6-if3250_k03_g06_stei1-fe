@@ -42,10 +42,10 @@ export function SidebarProdi() {
     }, []);
 
     const navigation = [
-        { name: 'Beranda', href: berandaHref, icon: LayoutDashboard },
+        { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Profil Program Studi', href: '/profil-prodi', icon: User },
         { name: 'Data LKPS', href: '#', icon: FileSpreadsheet },
-        { name: 'Dokumen LED', href: '#', icon: FileText },
+        { name: 'Dokumen LED', href: '/led', icon: FileText }, 
         { name: 'Dokumen Eviden', href: '#', icon: FolderOpen },
         { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
         { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },

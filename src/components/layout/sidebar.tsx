@@ -12,7 +12,8 @@ import {
     Users, 
     Settings, 
     LogOut,
-    Loader2
+    Loader2,
+    FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -22,6 +23,7 @@ import { getErrorMessage } from "@/lib/errors";
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard},
     { name: 'Dashboard Prodi', href: '/prodi-saya', icon: BookOpen},
+    { name: 'Dokumen LED', href: '/led', icon: FileText}, 
     { name: 'Data Kuantitatif Institusi', href: '#', icon: Database},
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
     { name: 'Simulasi Skor Akreditasi', href: '#', icon: Calculator},
