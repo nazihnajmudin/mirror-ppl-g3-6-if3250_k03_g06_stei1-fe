@@ -13,10 +13,14 @@ export type UserRole =
 
 export interface User {
   id: string;
-  nama: string;
+  name: string;
   email: string;
   role: UserRole;
-  prodiId?: string;
+  prodiId: string | null;
+  prodi: {
+    id: string;
+    fullname: string;
+  } | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -64,5 +68,67 @@ export interface ProdiAssignment {
 export interface CreatePenugasanInput {
   userId: string;
   prodiId: string;
-  kriteriaIds: string[];
+}
+
+export interface CurrentUser {
+  userId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  prodiId: string | null;
+}
+
+export interface ProdiOption {
+  id: string;
+  fullname: string;
+  abbreviation: string | null;
+  degree: string | null;
+}
+
+export interface DashboardData {
+  prodi: {
+    id: string;
+    fullname: string;
+    abbreviation: string | null;
+    degree: string | null;
+  };
+  accreditation: {
+    grade: string | null;
+    startDate: string | null;
+    endDate: string | null;
+  };
+  documents: {
+    lkps: {
+      status: string;
+      progress: number;
+    };
+    led: {
+      status: string;
+      progress: number;
+    };
+  };
+  simulationScore: number;
+  criteria: Array<{
+    id: string;
+    code: string;
+    name: string;
+    progress: number;
+  }>;
+  criticalIndicators: Array<{
+    id: string;
+    name: string;
+    status: string;
+  }>;
+  recentActivities: Array<{
+    id: string;
+    user: string;
+    action: string;
+    timestamp: string;
+  }>;
+  accessInfo?: {
+    canEdit: boolean;
+    canAccess: boolean;
+    role: string;
+    isReadOnly: boolean;
+  };
 }
