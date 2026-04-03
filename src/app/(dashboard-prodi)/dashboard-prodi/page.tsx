@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
-import type { ApiResponse } from "@/types/api.types"
-import type { DashboardData } from "@/types/dashboard.types"
+import { getCurrentUser } from "@/lib/api-prodi"
+import type { ApiResponse, CurrentUser, DashboardData } from "@/types/api.types"
 
 export default function DashboardProdiPage() {
   const router = useRouter()
@@ -24,8 +24,13 @@ export default function DashboardProdiPage() {
   const [mounted, setMounted] = React.useState(false)
   const [selectedCriterion, setSelectedCriterion] = React.useState<any | null>(null)
   const [selectedSubItem, setSelectedSubItem] = React.useState<any | null>(null)
+  const [currentUser, setCurrentUser] = React.useState<CurrentUser | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    getCurrentUser().then(setCurrentUser).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!mounted) return
@@ -127,10 +132,12 @@ export default function DashboardProdiPage() {
           <div className="flex items-center gap-3">
             <Bell className="w-5 h-5 text-gray-500" />
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">M</div>
+              <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
+                {currentUser?.name?.charAt(0)?.toUpperCase() ?? "?"}
+              </div>
               <div className="text-right">
-                <p className="text-xs font-semibold text-gray-800">Michael</p>
-                <p className="text-xs text-gray-400">Pimpinan</p>
+                <p className="text-xs font-semibold text-gray-800">{currentUser?.name ?? "—"}</p>
+                <p className="text-xs text-gray-400">{currentUser?.role ?? "—"}</p>
               </div>
             </div>
           </div>

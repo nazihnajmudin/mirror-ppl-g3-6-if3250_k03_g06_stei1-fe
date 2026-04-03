@@ -17,6 +17,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,8 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { addPenugasan } from "@/lib/api-prodi"
-import { ProdiAssignment } from "@/types/api.types"
+import { Trash2 } from "lucide-react"
+import { getCurrentUser, getProdiMembers, getPenugasan, addPenugasan, deletePenugasan } from "@/lib/api-prodi"
+import type { User, ProdiAssignment } from "@/types/api.types"
 
 const kriteria = [
   { id: "K1", label: "Visi, Misi, Tujuan & Strategi" },
@@ -39,33 +47,64 @@ const kriteria = [
   { id: "K9", label: "Luaran dan Capaian Tridharma" },
 ]
 
-const anggotaList = [
-  { name: "Siti", initials: "SI" },
-  { name: "Agus", initials: "AG" },
-  { name: "Kevin", initials: "KE" },
-]
+const DEFAULT_PRODI_ID = "prodi-if"
 
-interface Penugasan {
-  id: string
-  anggota: string
-  initials: string
-  kriteria: string
-  label: string
-  tanggal: string
+function makeInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")
 }
 
-const initialPenugasan: Penugasan[] = [
-  { id: "1", anggota: "Siti", initials: "SI", kriteria: "K1", label: "Visi, Misi, Tujuan & Strategi", tanggal: "20 Juni 2027" },
-  { id: "2", anggota: "Siti", initials: "SI", kriteria: "K2", label: "Tata Pamong & Kerjasama", tanggal: "21 Juni 2027" },
-  { id: "3", anggota: "Agus", initials: "AG", kriteria: "K3", label: "Mahasiswa", tanggal: "22 Juni 2027" },
-  { id: "4", anggota: "Agus", initials: "AG", kriteria: "K4", label: "Sumber Daya Manusia", tanggal: "23 Juni 2027" },
-]
-
 export default function PenugasanPage() {
-  const [penugasan, setPenugasan] = React.useState<Penugasan[]>(initialPenugasan)
-  const [selectedAnggota, setSelectedAnggota] = React.useState("")
+  const [prodiId, setProdiId] = React.useState<string>(DEFAULT_PRODI_ID)
+  const [anggotaList, setAnggotaList] = React.useState<User[]>([])
+  const [penugasanList, setPenugasanList] = React.useState<ProdiAssignment[]>([])
+  const [selectedUserId, setSelectedUserId] = React.useState("")
   const [selectedKriteria, setSelectedKriteria] = React.useState<string[]>([])
   const [filterAnggota, setFilterAnggota] = React.useState("Semua Anggota")
+  const [showHapusDialog, setShowHapusDialog] = React.useState(false)
+  const [penugasanToDelete, setPenugasanToDelete] = React.useState<string | null>(null)
+  const [toast, setToast] = React.useState<{ message: string; type: "success" | "error" } | null>(null)
+
+  React.useEffect(() => {
+    const init = async () => {
+      try {
+        const me = await getCurrentUser()
+        const resolvedProdiId = me.prodiId || DEFAULT_PRODI_ID
+        setProdiId(resolvedProdiId)
+        await loadData(resolvedProdiId)
+      } catch {
+        await loadData(DEFAULT_PRODI_ID)
+      }
+    }
+    init()
+  }, [])
+
+  const loadData = async (id: string) => {
+    try {
+      const [members, assignments] = await Promise.all([
+        getProdiMembers(id),
+        getPenugasan(id),
+      ])
+      setAnggotaList(members)
+      setPenugasanList(assignments)
+    } catch {
+    }
+  }
+
+  React.useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
+
+  const showNotification = (message: string, type: "success" | "error") => {
+    setToast({ message, type })
+  }
 
   const toggleKriteria = (id: string) => {
     setSelectedKriteria((prev) =>
@@ -74,54 +113,68 @@ export default function PenugasanPage() {
   }
 
   const handleTugaskan = async () => {
-    if (!selectedAnggota || selectedKriteria.length === 0) {
-      alert("Pilih anggota dan minimal satu kriteria!");
-      return;
+    if (!selectedUserId) {
+      showNotification("Pilih anggota terlebih dahulu!", "error")
+      return
+    }
+
+    const alreadyAssigned = penugasanList.some((p) => p.userId === selectedUserId)
+    if (alreadyAssigned) {
+      showNotification("Anggota ini sudah memiliki penugasan", "error")
+      return
     }
 
     try {
-      const result = await addPenugasan({
-        userId: selectedAnggota,
-        prodiId: "1",
-        kriteriaIds: selectedKriteria,
-      });
-
-      setPenugasan((prev: any) => {
-        const existingIdx = prev.findIndex(p => p.id === result.userId);
-        
-        if (existingIdx > -1) {
-          const updated = [...prev];
-          updated[existingIdx] = result;
-          return updated;
-        }
-        
-        return [result, ...prev];
-      });
-
-      setSelectedKriteria([]);
-      setSelectedAnggota("");
-
-    } catch (error: unknown) {
-      console.error((error as Error).message);
+      const result = await addPenugasan({ userId: selectedUserId, prodiId })
+      setPenugasanList((prev) => [result, ...prev])
+      setSelectedKriteria([])
+      setSelectedUserId("")
+      showNotification("Penugasan berhasil ditambahkan!", "success")
+    } catch (error: any) {
+      showNotification(error?.response?.data?.message || error.message || "Gagal menambah penugasan", "error")
     }
-  };
+  }
 
-  const assignedKriteria = [...new Set(penugasan.map((p) => p.kriteria))]
-  const unassignedKriteria = kriteria.filter((k) => !assignedKriteria.includes(k.id))
+  const confirmHapusPenugasan = (id: string) => {
+    setPenugasanToDelete(id)
+    setShowHapusDialog(true)
+  }
 
-  const penugasanByAnggota = anggotaList.map((a) => ({
-    ...a,
-    kriteria: penugasan.filter((p) => p.anggota === a.name).map((p) => p.kriteria),
-    tanggal: penugasan.find((p) => p.anggota === a.name)?.tanggal ?? "-",
-  }))
+  const executeHapusPenugasan = async () => {
+    if (!penugasanToDelete) return
+    try {
+      await deletePenugasan(penugasanToDelete)
+      setPenugasanList((prev) => prev.filter((p) => p.id !== penugasanToDelete))
+      showNotification("Penugasan berhasil dihapus", "success")
+    } catch (error: any) {
+      showNotification(error?.response?.data?.message || "Gagal menghapus penugasan", "error")
+    } finally {
+      setShowHapusDialog(false)
+      setPenugasanToDelete(null)
+    }
+  }
 
-  const filteredRows =
+  const assignedUserIds = new Set(penugasanList.map((p) => p.userId))
+  const unassignedCount = anggotaList.filter((a) => !assignedUserIds.has(a.id)).length
+
+  const filteredPenugasan =
     filterAnggota === "Semua Anggota"
-      ? penugasanByAnggota.filter((a) => a.kriteria.length > 0)
-      : penugasanByAnggota.filter((a) => a.name === filterAnggota && a.kriteria.length > 0)
+      ? penugasanList
+      : penugasanList.filter((p) => p.user?.id === filterAnggota)
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB]">
+    <div className="min-h-screen flex bg-[#F9FAFB] relative">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold text-white transition-all ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
         <SidebarProdi />
       </div>
@@ -139,26 +192,24 @@ export default function PenugasanPage() {
           <Card className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <CardContent className="px-5 py-4">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Penugasan</p>
-              <p className="text-3xl font-bold text-gray-900">{penugasan.length}</p>
+              <p className="text-3xl font-bold text-gray-900">{penugasanList.length}</p>
               <p className="text-xs text-gray-500 mt-1">Aktif</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <CardContent className="px-5 py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Kriteria Tercakup</p>
-              <p className="text-3xl font-bold text-gray-900">{assignedKriteria.length}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Kriteria Dipilih</p>
+              <p className="text-3xl font-bold text-gray-900">{selectedKriteria.length}</p>
               <p className="text-xs text-gray-500 mt-1">dari {kriteria.length} Kriteria</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <CardContent className="px-5 py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Kriteria Belum Ditugaskan</p>
-              <p className="text-3xl font-bold text-red-500">{unassignedKriteria.length}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {unassignedKriteria.map((k) => k.id).join(", ") || "Semua sudah ditugaskan"}
-              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Belum Ditugaskan</p>
+              <p className="text-3xl font-bold text-red-500">{unassignedCount}</p>
+              <p className="text-xs text-gray-500 mt-1">anggota</p>
             </CardContent>
           </Card>
 
@@ -181,20 +232,21 @@ export default function PenugasanPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Pilih Anggota Tim Prodi</label>
                 <select
-                  value={selectedAnggota}
-                  onChange={(e) => setSelectedAnggota(e.target.value)}
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   <option value="">-- Pilih anggota --</option>
-                  {anggotaList.map((a) => (
-                    <option key={a.name} value={a.name}>{a.name}</option>
-                  ))}
+                  {anggotaList
+                    .filter((a) => !assignedUserIds.has(a.id))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
                 </select>
               </div>
 
-              {/* Checklist kriteria */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-3">Pilih Kriteria</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-3">Pilih Kriteria (opsional)</label>
                 <div className="space-y-2.5">
                   {kriteria.map((k) => (
                     <label key={k.id} className="flex items-start gap-3 cursor-pointer group">
@@ -214,7 +266,7 @@ export default function PenugasanPage() {
 
               <Button
                 onClick={handleTugaskan}
-                disabled={!selectedAnggota || selectedKriteria.length === 0}
+                disabled={!selectedUserId}
                 className="w-full bg-black hover:bg-gray-800 text-white rounded-lg py-2.5 text-sm font-semibold transition-all active:scale-95 disabled:opacity-40"
               >
                 Tugaskan
@@ -231,9 +283,9 @@ export default function PenugasanPage() {
                 onChange={(e) => setFilterAnggota(e.target.value)}
                 className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
               >
-                <option>Semua Anggota</option>
-                {anggotaList.map((a) => (
-                  <option key={a.name}>{a.name}</option>
+                <option value="Semua Anggota">Semua Anggota</option>
+                {penugasanList.map((p) => (
+                  <option key={p.id} value={p.user?.id ?? p.userId}>{p.user?.name ?? p.userId}</option>
                 ))}
               </select>
             </CardHeader>
@@ -242,42 +294,53 @@ export default function PenugasanPage() {
                 <TableHeader className="bg-gray-50/50">
                   <TableRow className="hover:bg-transparent border-b border-gray-100">
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-3 tracking-wider">ANGGOTA</TableHead>
-                    <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-3 tracking-wider">KRITERIA</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-3 tracking-wider">TANGGAL DITUGASKAN</TableHead>
+                    <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-3 tracking-wider text-right">AKSI</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRows.length === 0 ? (
+                  {filteredPenugasan.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} className="px-6 py-8 text-center text-sm text-gray-400">
                         Belum ada penugasan
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredRows.map((row) => (
-                      <TableRow key={row.name} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
-                        <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="w-8 h-8 border border-gray-100 shadow-sm">
-                              <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
-                                {row.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-[13px] font-semibold text-gray-900">{row.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {row.kriteria.map((k) => (
-                              <Badge key={k} variant="secondary" className="bg-gray-100 text-gray-700 rounded-md px-2 py-0.5 text-[11px] font-bold shadow-none border-none">
-                                {k}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-[13px] text-gray-500">{row.tanggal}</TableCell>
-                      </TableRow>
-                    ))
+                    filteredPenugasan.map((p) => {
+                      const name = p.user?.name ?? p.userId
+                      const initials = makeInitials(name)
+                      const tanggal = new Date(p.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric", month: "long", year: "numeric",
+                      })
+                      return (
+                        <TableRow key={p.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
+                          <TableCell className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-8 h-8 border border-gray-100 shadow-sm">
+                                <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <span className="text-[13px] font-semibold text-gray-900 block">{name}</span>
+                                <span className="text-[12px] text-gray-400">{p.user?.email ?? ""}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-[13px] text-gray-500">{tanggal}</TableCell>
+                          <TableCell className="px-6 py-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => confirmHapusPenugasan(p.id)}
+                              className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -288,44 +351,66 @@ export default function PenugasanPage() {
         {/* Ringkasan Beban Tugas */}
         <Card className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <CardHeader className="px-6 py-5 border-b border-gray-100">
-            <CardTitle className="text-base font-bold text-gray-900">Ringkasan Beban Tugas</CardTitle>
+            <CardTitle className="text-base font-bold text-gray-900">Ringkasan Tim Prodi</CardTitle>
           </CardHeader>
           <CardContent className="px-6 py-5">
-            <div className="grid grid-cols-3 gap-4">
-              {anggotaList.map((a) => {
-                const myKriteria = penugasan.filter((p) => p.anggota === a.name)
-                return (
-                  <div key={a.name} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <Avatar className="w-8 h-8 border border-gray-200">
-                        <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
-                          {a.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-bold text-gray-900">{a.name}</span>
+            {anggotaList.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Belum ada anggota tim prodi.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                {anggotaList.map((a) => {
+                  const assigned = penugasanList.some((p) => p.userId === a.id)
+                  return (
+                    <div key={a.id} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <Avatar className="w-8 h-8 border border-gray-200">
+                          <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
+                            {makeInitials(a.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <span className="text-sm font-bold text-gray-900 block">{a.name}</span>
+                          <span className="text-[11px] text-gray-400">{a.role}</span>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold shadow-none border-none ${
+                          assigned ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                        }`}
+                      >
+                        {assigned ? "Sudah Ditugaskan" : "Belum Ditugaskan"}
+                      </Badge>
                     </div>
-                    <p className="text-xs text-gray-400 mb-1">Kriteria ditangani:</p>
-                    <p className={`text-2xl font-bold mb-2 ${myKriteria.length === 0 ? "text-red-500" : "text-gray-900"}`}>
-                      {myKriteria.length}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {myKriteria.length === 0 ? (
-                        <span className="text-xs text-gray-400 italic">Belum ada penugasan</span>
-                      ) : (
-                        myKriteria.map((p) => (
-                          <Badge key={p.kriteria} variant="secondary" className="bg-gray-100 text-gray-700 rounded-md px-2 py-0.5 text-[11px] font-bold shadow-none border-none">
-                            {p.kriteria}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
+
+      {/* Dialog Konfirmasi Hapus */}
+      <Dialog open={showHapusDialog} onOpenChange={setShowHapusDialog}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-gray-900">Konfirmasi Hapus Penugasan</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Apakah Anda yakin ingin menghapus penugasan ini? Tindakan ini tidak dapat dibatalkan.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowHapusDialog(false)} className="rounded-lg border-gray-200 text-sm font-semibold">
+              Batal
+            </Button>
+            <Button onClick={executeHapusPenugasan} className="bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">
+              Ya, Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

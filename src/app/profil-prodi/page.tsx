@@ -35,7 +35,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { addProdiMember, deleteProdiMember } from "@/lib/api-prodi"
+import {
+  getCurrentUser,
+  getProdiById,
+  getAccreditation,
+  updateProdi,
+  upsertAccreditation,
+  addProdiMember,
+  deleteProdiMember,
+  getProdiMembers,
+} from "@/lib/api-prodi"
 
 interface ProdiData {
   fullname: string
@@ -60,54 +69,130 @@ interface TimProdiMember {
   initials: string
 }
 
-const initialProdiData: ProdiData = {
-  fullname: "Teknik Informatika",
-  akreditasi: "Unggul",
-  degree: "Sarjana (S1)",
-  endDate: "28 November 2027",
-  namaKaprodi: "Michael Levi",
-  visi: "To be a higher educational institution of international repute in science and technology, particularly in the field of informatics and computing, that contributes significantly to national development.",
-  misi: [
-    "To provide high quality education in informatics and computing that is relevant to the needs of industry and society.",
-    "To promote research and innovation in informatics and computing that contributes to the advancement of knowledge and technology.",
-    "To disseminate knowledge and technology through community service and collaboration with industry and government.",
-  ],
-  skorAkreditasi: 350,
-  targetSkor: 500,
-  certificateUrl: "https://banpt.or.id/sertifikat/sample.pdf",
-}
+const DEFAULT_PRODI_ID = "prodi-if"
 
-const initialTimProdi: TimProdiMember[] = [
-  { id: "1", name: "Siti", email: "siti@itb.ac.id", role: "TIM_PRODI", indikator: ["K1", "K2"], isActive: true, initials: "SI" },
-  { id: "2", name: "Agus", email: "agus@itb.ac.id", role: "TIM_PRODI", indikator: ["K3", "K4"], isActive: true, initials: "AG" },
-  { id: "3", name: "Kevin", email: "kevin@itb.ac.id", role: "TIM_PRODI", indikator: ["K5", "K6"], isActive: false, initials: "KE" },
-]
+function makeInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")
+}
 
 export default function ProfilProdiPage() {
   const [activeTab, setActiveTab] = React.useState<"informasi" | "tim">("informasi")
-  const [prodiData, setProdiData] = React.useState<ProdiData>(initialProdiData)
-  const [timProdi, setTimProdi] = React.useState<TimProdiMember[]>(initialTimProdi)
+  const [prodiId, setProdiId] = React.useState<string>(DEFAULT_PRODI_ID)
+  const [prodiData, setProdiData] = React.useState<ProdiData>({
+    fullname: "",
+    akreditasi: "",
+    degree: "",
+    endDate: "",
+    namaKaprodi: "",
+    visi: "",
+    misi: [],
+    skorAkreditasi: 0,
+    targetSkor: 0,
+    certificateUrl: "",
+  })
+  const [timProdi, setTimProdi] = React.useState<TimProdiMember[]>([])
   const [isEditing, setIsEditing] = React.useState(false)
   const [editForm, setEditForm] = React.useState<ProdiData>(prodiData)
-  const [misiText, setMisiText] = React.useState(prodiData.misi.join("\n"))
+  const [misiText, setMisiText] = React.useState("")
   const [showSertifikat, setShowSertifikat] = React.useState(false)
   const [showTambahAnggota, setShowTambahAnggota] = React.useState(false)
+  const [showHapusDialog, setShowHapusDialog] = React.useState(false)
+  const [memberToDelete, setMemberToDelete] = React.useState<string | null>(null)
+  const [toast, setToast] = React.useState<{ message: string; type: "success" | "error" } | null>(null)
   const [newNama, setNewNama] = React.useState("")
   const [newEmail, setNewEmail] = React.useState("")
   const [newRole, setNewRole] = React.useState("TIM_PRODI")
   const [newIsActive, setNewIsActive] = React.useState(true)
+  const [formErrors, setFormErrors] = React.useState<{ name?: string; email?: string; general?: string }>({})
+
+  React.useEffect(() => {
+    const init = async () => {
+      try {
+        const me = await getCurrentUser()
+        const resolvedProdiId = me.prodiId || DEFAULT_PRODI_ID
+        setProdiId(resolvedProdiId)
+        await loadProdiData(resolvedProdiId)
+        await loadTimProdi(resolvedProdiId)
+      } catch {
+        await loadProdiData(DEFAULT_PRODI_ID)
+        await loadTimProdi(DEFAULT_PRODI_ID)
+      }
+    }
+    init()
+  }, [])
+
+  const loadProdiData = async (id: string) => {
+    try {
+      const prodi = await getProdiById(id)
+      const accreditation = await getAccreditation(id)
+
+      setProdiData((prev) => ({
+        ...prev,
+        fullname: prodi.fullname,
+        degree: prodi.degree ?? "",
+        akreditasi: accreditation?.grade ?? "",
+        endDate: accreditation?.endDate ? new Date(accreditation.endDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "",
+        certificateUrl: accreditation?.certificateUrl ?? "",
+      }))
+    } catch {
+    }
+  }
+
+  const loadTimProdi = async (id: string) => {
+    try {
+      const members = await getProdiMembers(id)
+      setTimProdi(
+        members.map((m) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          role: m.role,
+          indikator: [],
+          isActive: m.isActive !== false,
+          initials: makeInitials(m.name),
+        }))
+      )
+    } catch {
+    }
+  }
+
+  React.useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
+
+  const showNotification = (message: string, type: "success" | "error") => {
+    setToast({ message, type })
+  }
+
   const openEditProfil = () => {
     setEditForm(prodiData)
     setMisiText(prodiData.misi.join("\n"))
     setIsEditing(true)
   }
 
-  const handleSimpanProfil = () => {
-    setProdiData({
-      ...editForm,
-      misi: misiText.split("\n").map((s) => s.trim()).filter(Boolean),
-    })
-    setIsEditing(false)
+  const handleSimpanProfil = async () => {
+    try {
+      await updateProdi(prodiId, { fullname: editForm.fullname, degree: editForm.degree })
+      if (editForm.akreditasi || editForm.certificateUrl) {
+        await upsertAccreditation(prodiId, { grade: editForm.akreditasi, certificateUrl: editForm.certificateUrl })
+      }
+      setProdiData({
+        ...editForm,
+        misi: misiText.split("\n").map((s) => s.trim()).filter(Boolean),
+      })
+      setIsEditing(false)
+      showNotification("Profil berhasil diperbarui", "success")
+    } catch (error: any) {
+      showNotification(error?.response?.data?.message || "Gagal menyimpan profil", "error")
+    }
   }
 
   const handleBatalEdit = () => {
@@ -119,66 +204,92 @@ export default function ProfilProdiPage() {
     setNewEmail("")
     setNewRole("TIM_PRODI")
     setNewIsActive(true)
+    setFormErrors({})
     setShowTambahAnggota(true)
   }
 
   const handleTambahAnggota = async () => {
-    if (!newNama.trim() || !newEmail.trim()) return;
+    if (!newNama.trim() || !newEmail.trim()) {
+      setFormErrors({ general: "Nama dan Email wajib diisi" })
+      return
+    }
+
+    setFormErrors({})
 
     try {
       const savedUser = await addProdiMember({
         name: newNama.trim(),
         email: newEmail.trim(),
-        role: newRole, 
-        password: "password123"
-      });
+        role: newRole,
+        password: "password123",
+        prodiId,
+      })
 
-      const initials = (savedUser.nama || "")
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-
+      const savedName = savedUser.name || newNama
       setTimProdi((prev) => [
         ...prev,
         {
           id: savedUser.id,
-          name: savedUser.nama,
+          name: savedName,
           email: savedUser.email,
           role: savedUser.role,
-          indikator: [], 
+          indikator: [],
           isActive: true,
-          initials,
+          initials: makeInitials(savedName),
         },
-      ]);
+      ])
 
-      setShowTambahAnggota(false);
-      setNewNama("");
-      setNewEmail("");
-
-    } catch (error: unknown) {
-      console.error("Gagal menambah anggota:", (error as Error).message);
+      setShowTambahAnggota(false)
+      setNewNama("")
+      setNewEmail("")
+      showNotification("Berhasil menambahkan anggota baru!", "success")
+    } catch (error: any) {
+      if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
+        const newErrors: Record<string, string> = {}
+        error.response.data.details.forEach((e: any) => {
+          if (e.field) newErrors[e.field] = e.message
+        })
+        setFormErrors(newErrors)
+      } else {
+        setFormErrors({ general: error.response?.data?.message || error.message })
+      }
+      showNotification("Gagal menambahkan anggota", "error")
     }
-  };
+  }
 
-  const handleHapusAnggota = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus anggota ini?")) return;
+  const confirmHapusAnggota = (id: string) => {
+    setMemberToDelete(id)
+    setShowHapusDialog(true)
+  }
+
+  const executeHapusAnggota = async () => {
+    if (!memberToDelete) return
 
     try {
-      await deleteProdiMember(id);
-
-      setTimProdi((prev) => prev.filter((m) => m.id !== id));
-      
-      console.log("Anggota berhasil dihapus dari database");
-      
-    } catch (error: unknown) {
-      console.error("Gagal menghapus:", (error as Error).message);
+      await deleteProdiMember(memberToDelete)
+      setTimProdi((prev) => prev.filter((m) => m.id !== memberToDelete))
+      showNotification("Anggota berhasil dihapus", "success")
+    } catch (error: any) {
+      showNotification(error?.response?.data?.message || "Gagal menghapus anggota", "error")
+    } finally {
+      setShowHapusDialog(false)
+      setMemberToDelete(null)
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB]">
+    <div className="min-h-screen flex bg-[#F9FAFB] relative">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold text-white transition-all ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
         <SidebarProdi />
       </div>
@@ -191,28 +302,34 @@ export default function ProfilProdiPage() {
           <CardContent className="px-6 py-5">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold">
-                TI
+                {prodiData.fullname ? prodiData.fullname.slice(0, 2).toUpperCase() : "—"}
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-gray-900">{prodiData.fullname}</h1>
-                  <Badge className="bg-green-50 text-green-600 border-none shadow-none rounded-md px-2.5 py-0.5 text-xs font-bold">
-                    {prodiData.akreditasi}
-                  </Badge>
+                  <h1 className="text-2xl font-bold text-gray-900">{prodiData.fullname || "Memuat..."}</h1>
+                  {prodiData.akreditasi && (
+                    <Badge className="bg-green-50 text-green-600 border-none shadow-none rounded-md px-2.5 py-0.5 text-xs font-bold">
+                      {prodiData.akreditasi}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-gray-500">
                   <span>{prodiData.degree}</span>
-                  <span>·</span>
-                  {prodiData.certificateUrl ? (
-                    <button
-                      onClick={() => setShowSertifikat(true)}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition-colors font-medium"
-                    >
-                      Berlaku s.d. {prodiData.endDate}
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  ) : (
-                    <span>Berlaku s.d. {prodiData.endDate}</span>
+                  {prodiData.endDate && (
+                    <>
+                      <span>·</span>
+                      {prodiData.certificateUrl ? (
+                        <button
+                          onClick={() => setShowSertifikat(true)}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition-colors font-medium"
+                        >
+                          Berlaku s.d. {prodiData.endDate}
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <span>Berlaku s.d. {prodiData.endDate}</span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -281,7 +398,6 @@ export default function ProfilProdiPage() {
               )}
             </CardHeader>
             <CardContent className="px-6 py-6 space-y-8">
-              {/* Indikator Program Studi */}
               <div>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Indikator Program Studi</h3>
                 <div className="grid grid-cols-2 gap-6">
@@ -298,7 +414,7 @@ export default function ProfilProdiPage() {
                     {isEditing ? (
                       <Input value={editForm.namaKaprodi} onChange={(e) => setEditForm((f) => ({ ...f, namaKaprodi: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">{prodiData.namaKaprodi}</p>
+                      <p className="text-sm font-semibold text-gray-900">{prodiData.namaKaprodi || "—"}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
@@ -306,7 +422,7 @@ export default function ProfilProdiPage() {
                     {isEditing ? (
                       <Input value={editForm.degree} onChange={(e) => setEditForm((f) => ({ ...f, degree: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">{prodiData.degree}</p>
+                      <p className="text-sm font-semibold text-gray-900">{prodiData.degree || "—"}</p>
                     )}
                   </div>
                 </div>
@@ -314,7 +430,6 @@ export default function ProfilProdiPage() {
 
               <div className="border-t border-gray-100" />
 
-              {/* Visi & Misi */}
               <div>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Visi &amp; Misi</h3>
                 <div className="space-y-4">
@@ -328,7 +443,7 @@ export default function ProfilProdiPage() {
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
                       />
                     ) : (
-                      <p className="text-sm text-gray-700 leading-relaxed">{prodiData.visi}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{prodiData.visi || "—"}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
@@ -342,12 +457,14 @@ export default function ProfilProdiPage() {
                         rows={5}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
                       />
-                    ) : (
+                    ) : prodiData.misi.length > 0 ? (
                       <ol className="list-decimal list-inside space-y-1.5">
                         {prodiData.misi.map((item, idx) => (
                           <li key={idx} className="text-sm text-gray-700 leading-relaxed">{item}</li>
                         ))}
                       </ol>
+                    ) : (
+                      <p className="text-sm text-gray-500">—</p>
                     )}
                   </div>
                 </div>
@@ -355,24 +472,23 @@ export default function ProfilProdiPage() {
 
               <div className="border-t border-gray-100" />
 
-              {/* Akreditasi */}
               <div>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Akreditasi</h3>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1.5">
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Skor Akreditasi</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">Grade Akreditasi</p>
                     {isEditing ? (
-                      <Input type="number" value={editForm.skorAkreditasi} onChange={(e) => setEditForm((f) => ({ ...f, skorAkreditasi: Number(e.target.value) }))} className="rounded-lg border-gray-200 text-sm h-9" />
+                      <Input value={editForm.akreditasi} onChange={(e) => setEditForm((f) => ({ ...f, akreditasi: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" />
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900">{prodiData.skorAkreditasi}</p>
+                      <p className="text-sm font-semibold text-gray-900">{prodiData.akreditasi || "—"}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Target Skor Akreditasi</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">URL Sertifikat</p>
                     {isEditing ? (
-                      <Input type="number" value={editForm.targetSkor} onChange={(e) => setEditForm((f) => ({ ...f, targetSkor: Number(e.target.value) }))} className="rounded-lg border-gray-200 text-sm h-9" />
+                      <Input value={editForm.certificateUrl} onChange={(e) => setEditForm((f) => ({ ...f, certificateUrl: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" placeholder="https://..." />
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900">{prodiData.targetSkor}</p>
+                      <p className="text-sm font-semibold text-gray-900">{prodiData.certificateUrl || "—"}</p>
                     )}
                   </div>
                 </div>
@@ -404,12 +520,18 @@ export default function ProfilProdiPage() {
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">NAMA</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">EMAIL</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">ROLE</TableHead>
-                    <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">INDIKATOR</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">STATUS</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider text-right">AKSI</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {timProdi.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="px-6 py-8 text-center text-sm text-gray-400">
+                        Belum ada anggota tim prodi.
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {timProdi.map((member) => (
                     <TableRow key={member.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
                       <TableCell className="px-6 py-4">
@@ -427,15 +549,6 @@ export default function ProfilProdiPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1">
-                          {member.indikator.map((k) => (
-                            <Badge key={k} variant="secondary" className="bg-gray-100 text-gray-700 rounded-md px-2 py-0.5 text-[11px] font-bold shadow-none border-none">
-                              {k}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4">
                         <Badge
                           variant="secondary"
                           className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold shadow-none border-none ${
@@ -449,7 +562,7 @@ export default function ProfilProdiPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleHapusAnggota(member.id)}
+                          onClick={() => confirmHapusAnggota(member.id)}
                           className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -464,7 +577,7 @@ export default function ProfilProdiPage() {
         )}
       </main>
 
-      {/* Sertifikat Akreditasi */}
+      {/* Dialog Sertifikat Akreditasi */}
       <Dialog open={showSertifikat} onOpenChange={setShowSertifikat}>
         <DialogContent className="max-w-2xl bg-white">
           <DialogHeader>
@@ -501,21 +614,27 @@ export default function ProfilProdiPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Tambah Anggota */}
+      {/* Dialog Tambah Anggota */}
       <Dialog open={showTambahAnggota} onOpenChange={setShowTambahAnggota}>
         <DialogContent className="max-w-lg bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-gray-900">Tambah Anggota Tim Prodi</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {formErrors.general && (
+              <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-[13px] font-medium rounded-lg">
+                {formErrors.general}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</Label>
               <Input
                 placeholder="Masukkan nama"
                 value={newNama}
-                onChange={(e) => setNewNama(e.target.value)}
-                className="rounded-lg border-gray-200 text-sm"
+                onChange={(e) => { setNewNama(e.target.value); setFormErrors((prev) => ({ ...prev, name: undefined })) }}
+                className={`rounded-lg text-sm ${formErrors.name ? "border-red-500 focus-visible:ring-red-500" : "border-gray-200"}`}
               />
+              {formErrors.name && <p className="text-[11px] font-medium text-red-500">{formErrors.name}</p>}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</Label>
@@ -523,9 +642,10 @@ export default function ProfilProdiPage() {
                 type="email"
                 placeholder="nama@itb.ac.id"
                 value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="rounded-lg border-gray-200 text-sm"
+                onChange={(e) => { setNewEmail(e.target.value); setFormErrors((prev) => ({ ...prev, email: undefined })) }}
+                className={`rounded-lg text-sm ${formErrors.email ? "border-red-500 focus-visible:ring-red-500" : "border-gray-200"}`}
               />
+              {formErrors.email && <p className="text-[11px] font-medium text-red-500">{formErrors.email}</p>}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</Label>
@@ -538,28 +658,15 @@ export default function ProfilProdiPage() {
                 <option value="KAPRODI">Kaprodi</option>
               </select>
             </div>
-
             <div className="space-y-2">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</Label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                  <input
-                    type="radio"
-                    name="status"
-                    checked={newIsActive === true}
-                    onChange={() => setNewIsActive(true)}
-                    className="h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-400 cursor-pointer"
-                  />
+                  <input type="radio" name="status" checked={newIsActive === true} onChange={() => setNewIsActive(true)} className="h-4 w-4 border-gray-300 cursor-pointer" />
                   Aktif
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                  <input
-                    type="radio"
-                    name="status"
-                    checked={newIsActive === false}
-                    onChange={() => setNewIsActive(false)}
-                    className="h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-400 cursor-pointer"
-                  />
+                  <input type="radio" name="status" checked={newIsActive === false} onChange={() => setNewIsActive(false)} className="h-4 w-4 border-gray-300 cursor-pointer" />
                   Tidak Aktif
                 </label>
               </div>
@@ -569,12 +676,30 @@ export default function ProfilProdiPage() {
             <Button variant="outline" onClick={() => setShowTambahAnggota(false)} className="rounded-lg border-gray-200 text-sm font-semibold">
               Batal
             </Button>
-            <Button
-              onClick={handleTambahAnggota}
-              disabled={!newNama.trim() || !newEmail.trim()}
-              className="bg-black hover:bg-gray-800 text-white rounded-lg text-sm font-semibold disabled:opacity-40"
-            >
+            <Button onClick={handleTambahAnggota} className="bg-black hover:bg-gray-800 text-white rounded-lg text-sm font-semibold">
               Tambah
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Konfirmasi Hapus */}
+      <Dialog open={showHapusDialog} onOpenChange={setShowHapusDialog}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-gray-900">Konfirmasi Hapus</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Apakah Anda yakin ingin menghapus anggota ini dari Tim Prodi? Tindakan ini tidak dapat dibatalkan.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowHapusDialog(false)} className="rounded-lg border-gray-200 text-sm font-semibold">
+              Batal
+            </Button>
+            <Button onClick={executeHapusAnggota} className="bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">
+              Ya, Hapus
             </Button>
           </DialogFooter>
         </DialogContent>
