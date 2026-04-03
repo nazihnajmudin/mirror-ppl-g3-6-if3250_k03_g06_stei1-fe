@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye } from "lucide-react";
+import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
 import { useUser } from "@/hooks/useUser";
@@ -108,6 +108,9 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
     const router = useRouter();
     const { user } = useUser();
     const [prodiName, setProdiName] = useState<string>("Memuat Nama Prodi...");
+    
+    // Identifikasi Admin
+    const isAdmin = user?.role === 'SUPER_ADMIN';
 
     // State Periode, History, Preview
     const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
@@ -123,6 +126,15 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
     const fileInputRef = useRef<HTMLInputElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+    // State Delete Modal
+    const [deleteModal, setDeleteModal] = useState<{isOpen: boolean, type: 'single' | 'all', doc?: any}>({ isOpen: false, type: 'single' });
+    const [deleteConfirmText, setDeleteConfirmText] = useState("");
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const activeDoc = history.find(d => d.id === activeDocumentId);
+    const hasFinalDocument = history.some(d => d.status === 'FINAL');
+    const hasDraftDocuments = history.some(d => d.status === 'DRAFT');
 
     // Fetch Nama Prodi
     useEffect(() => {
@@ -145,34 +157,26 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
     useEffect(() => {
         const fetchPeriods = async () => {
             try {
-            const res = await apiClient.get(`/led/periods/${targetProdiId}`);
-            let periods: string[] = res.data.data;
-            
-            const currentYear = new Date().getFullYear().toString();
-            
-            // Skenario jika prodi benar-benar kosong sama sekali
-            if (!periods || periods.length === 0) {
-                periods = [currentYear];
-            } else {
-                // Cari nilai maksimum antara tahun terakhir dari API dan Tahun Saat Ini
-                const lastPeriod = periods[periods.length - 1];
-                if (parseInt(currentYear) > parseInt(lastPeriod)) {
-                    periods.push(currentYear);
+                const res = await apiClient.get(`/led/periods/${targetProdiId}`);
+                let periods: string[] = res.data.data;
+                const currentYear = new Date().getFullYear().toString();
+                
+                if (!periods || periods.length === 0) {
+                    periods = [currentYear];
+                } else {
+                    const lastPeriod = periods[periods.length - 1];
+                    if (parseInt(currentYear) > parseInt(lastPeriod)) periods.push(currentYear);
                 }
-            }
 
-            const uniquePeriods = Array.from(new Set(periods)).sort();
-
-            setAvailablePeriods(uniquePeriods);
-            setActivePeriode(uniquePeriods[uniquePeriods.length - 1]);
-            
+                const uniquePeriods = Array.from(new Set(periods)).sort();
+                setAvailablePeriods(uniquePeriods);
+                setActivePeriode(uniquePeriods[uniquePeriods.length - 1]);
             } catch (error) {
                 const currentYear = new Date().getFullYear().toString();
                 setAvailablePeriods([currentYear]);
                 setActivePeriode(currentYear);
             }
         };
-
         if (targetProdiId) fetchPeriods();
     }, [targetProdiId]);
 
@@ -302,164 +306,225 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
         }
     };
 
+    // Handler Hapus
+    const closeDeleteModal = () => {
+        setDeleteModal({ isOpen: false, type: 'single' });
+        setDeleteConfirmText("");
+    };
+
+    const executeDelete = async () => {
+        setIsDeleting(true);
+        try {
+            if (deleteModal.type === 'single' && deleteModal.doc) {
+                await apiClient.delete(`/led/document/${deleteModal.doc.id}`);
+                alert(`Versi ${deleteModal.doc.versi} berhasil dihapus.`);
+            } else if (deleteModal.type === 'all') {
+                await apiClient.delete(`/led/periode/${targetProdiId}/${activePeriode}`);
+                alert(`Semua dokumen DRAFT periode ${activePeriode} berhasil dihapus.`);
+            }
+            closeDeleteModal();
+            fetchHistory();
+        } catch (error: any) {
+            alert(error?.response?.data?.message || "Terjadi kesalahan saat menghapus data.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Logika disable tombol hapus di Modal
+    const isDeleteDisabled = () => {
+        if (isDeleting) return true;
+        
+        if (deleteModal.type === 'all') {
+            return deleteConfirmText !== `HAPUS DRAFT ${activePeriode}`;
+        }
+        
+        if (deleteModal.type === 'single' && deleteModal.doc?.status === 'FINAL') {
+            return deleteConfirmText !== "SAYA YAKIN HAPUS FINAL";
+        }
+        
+        return false; // Dokumen DRAFT biasa tidak butuh ketik konfirmasi
+    };
+
     if (!activePeriode) return <div className="p-8 text-gray-500">Memuat antarmuka...</div>;
 
     return (
-    <div className="space-y-6">
-        {/* 1. HEADER (Judul & Deskripsi) */}
+        <div className="space-y-6 relative">
+        
+        {/* 1. HEADER */}
         <header className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
             <p className="text-sm text-gray-500 mt-1">Manajemen arsip Laporan Evaluasi Diri (LED)</p>
         </header>
 
-        {/* 2. SELECTION PERIODE & NAVIGASI KEMBALI */}
+        {/* 2. SELECTION PERIODE & NAVIGASI */}
         <div className="relative flex items-center justify-center py-2 border-b border-gray-200 mb-8 pb-4 min-h-[50px]">
-        
-        {/* NAVIGASI KEMBALI */}
-        {isGuest && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center">
-            <Button 
-                variant="ghost" 
-                onClick={() => router.push('/led')} 
-                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 -ml-3 gap-2 font-semibold text-sm"
-            >
-                &larr; Kembali ke Daftar Prodi
-            </Button>
-            </div>
-        )}
-
-        {/* NAVIGASI PERIODE */}
-        <div className="flex items-center">
-            <button 
-            className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-900 mr-4 transition-colors"
-            onClick={() => { const idx = availablePeriods.indexOf(activePeriode); if (idx > 0) setActivePeriode(availablePeriods[idx - 1]); }}
-            >
-                <ChevronLeft className="w-5 h-5" />
-            </button>
-            
-            <div className="flex items-center justify-center gap-2 overflow-x-auto scrollbar-hide px-2">
-            {availablePeriods.map((period) => (
-                <button
-                key={period}
-                onClick={() => setActivePeriode(period)}
-                className={cn(
-                    "px-5 py-1.5 text-sm font-semibold rounded-full transition-all duration-200 whitespace-nowrap outline-none", 
-                    activePeriode === period 
-                    ? "bg-gray-900 text-white shadow-sm" 
-                    : "bg-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                )}
-                >
-                {period}
-                </button>
-            ))}
-            </div>
-
-            <button 
-            className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-900 ml-4 transition-colors"
-            onClick={() => { const idx = availablePeriods.indexOf(activePeriode); if (idx < availablePeriods.length - 1) setActivePeriode(availablePeriods[idx + 1]); }}
-            >
-                <ChevronRight className="w-5 h-5" />
-            </button>
-        </div>
-        </div>
-
-        {/* 3. KONTEN (GRID) */}
-        <div className="grid grid-cols-12 gap-6 h-[calc(100vh-240px)] min-h-[700px]">
-        
-        {/* KOLOM KIRI (UPLOAD & HISTORY) */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
-            
-            {canUpload && (
-            <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden shrink-0">
-                <CardHeader className="px-5 py-4 border-b border-gray-100 bg-white">
-                    <CardTitle className="text-sm font-bold text-gray-900">Impor Dokumen ({activePeriode})</CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                    <div 
-                        className={cn("border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-colors", isDragging ? "border-blue-500 bg-blue-50/50" : "border-gray-200 hover:bg-gray-50")}
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-                        onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files[0]); }}
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                            <UploadCloud className="w-5 h-5 text-blue-600" />
-                        </div>
-                        {selectedFile ? <div className="text-sm font-medium text-blue-600 truncate max-w-full px-2">{selectedFile.name}</div> : <><p className="text-[13px] font-medium text-gray-900">Klik atau drag file</p><p className="text-[11px] text-gray-500 mt-1">Maks 10MB (.docx)</p></>}
-                    </div>
-                    <input type="file" className="hidden" ref={fileInputRef} accept=".doc,.docx" onChange={(e) => e.target.files && handleFileSelection(e.target.files[0])} />
-                    <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="w-full mt-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs font-bold shadow-md h-10">
-                        {isUploading ? "Mengunggah..." : selectedFile ? `Simpan ke ${activePeriode}` : "Pilih File"}
+            {isGuest && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center">
+                    <Button variant="ghost" onClick={() => router.push('/led')} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 -ml-3 gap-2 font-semibold text-sm">
+                    &larr; Kembali ke Daftar Prodi
                     </Button>
-                </CardContent>
-            </Card>
+                </div>
+            )}
+            <div className="flex items-center">
+                <button className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 mr-4" onClick={() => { const idx = availablePeriods.indexOf(activePeriode); if (idx > 0) setActivePeriode(availablePeriods[idx - 1]); }}><ChevronLeft className="w-5 h-5" /></button>
+                <div className="flex gap-2 overflow-x-auto px-2">
+                    {availablePeriods.map((period) => (
+                        <button key={period} onClick={() => setActivePeriode(period)} className={cn("px-5 py-1.5 text-sm font-semibold rounded-full", activePeriode === period ? "bg-gray-900 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100")}>{period}</button>
+                    ))}
+                </div>
+                <button className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 ml-4" onClick={() => { const idx = availablePeriods.indexOf(activePeriode); if (idx < availablePeriods.length - 1) setActivePeriode(availablePeriods[idx + 1]); }}><ChevronRight className="w-5 h-5" /></button>
+            </div>
+        </div>
+
+        {/* 3. KONTEN GRID */}
+        <div className="grid grid-cols-12 gap-6 h-[calc(100vh-240px)] min-h-[750px]">
+            
+            {/* KOLOM KIRI */}
+            <div className="col-span-12 lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
+            {canUpload && (
+                <Card className="rounded-xl border border-gray-200 bg-white shadow-sm shrink-0">
+                    <CardHeader className="px-5 py-4 border-b border-gray-100"><CardTitle className="text-sm font-bold">Impor Dokumen ({activePeriode})</CardTitle></CardHeader>
+                    <CardContent className="p-5">
+                        <div 
+                        className={cn("border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer group", isDragging ? "border-blue-500 bg-blue-50/50" : "border-gray-200 hover:bg-gray-50")}
+                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                        onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFileSelection(e.dataTransfer.files[0]); }}
+                        onClick={() => fileInputRef.current?.click()}
+                        >
+                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><UploadCloud className="w-5 h-5 text-blue-600" /></div>
+                            {selectedFile ? <div className="text-sm font-medium text-blue-600 truncate px-2">{selectedFile.name}</div> : <><p className="text-[13px] font-medium text-gray-900">Klik atau drag file</p><p className="text-[11px] text-gray-500">Maks 10MB (.docx)</p></>}
+                        </div>
+                        <input type="file" className="hidden" ref={fileInputRef} accept=".doc,.docx" onChange={(e) => e.target.files && handleFileSelection(e.target.files[0])} />
+                        <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="w-full mt-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg h-10 text-xs shadow-md">{isUploading ? "Mengunggah..." : "Simpan Dokumen"}</Button>
+                    </CardContent>
+                </Card>
             )}
 
             {/* HISTORY CARD */}
-            <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
-            <CardHeader className="px-5 py-4 border-b border-gray-100 bg-white shrink-0">
-                <CardTitle className="text-sm font-bold text-gray-900">Riwayat Versi ({activePeriode})</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 overflow-y-auto flex-1 min-h-0">
+            <Card className="rounded-xl border border-gray-200 bg-white shadow-sm flex-1 flex flex-col min-h-0">
+                <CardHeader className="px-5 py-4 border-b border-gray-100 flex flex-row justify-between items-center shrink-0">
+                    <CardTitle className="text-sm font-bold text-gray-900">Riwayat Versi ({activePeriode})</CardTitle>
+                    {isAdmin && hasFinalDocument && hasDraftDocuments && (
+                        <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={() => setDeleteModal({ isOpen: true, type: 'all' })} 
+                        className="h-7 text-[10px] px-2 gap-1 font-bold animate-in fade-in slide-in-from-right-2"
+                        >
+                            <Trash2 className="w-3 h-3" /> Hapus Semua Versi Draft
+                        </Button>
+                    )}
+                </CardHeader>
+                <CardContent className="p-0 overflow-y-auto flex-1 min-h-0">
                 {isHistoryLoading ? <div className="p-5 text-center text-sm text-gray-500 animate-pulse">Memuat riwayat...</div> 
                 : history.length === 0 ? <div className="p-5 text-center text-sm text-gray-500">Belum ada dokumen yang diunggah.</div> 
                 : history.map((item, index) => {
                     const isLatest = index === 0; 
                     const isSelected = activeDocumentId === item.id;
                     return (
-                        <div key={item.id} onClick={() => setActiveDocumentId(item.id)} className={cn("px-5 py-4 border-b border-gray-50 flex items-start gap-3 transition-colors cursor-pointer", isSelected ? "bg-[#eef2ff] border-l-4 border-l-blue-500" : "bg-white hover:bg-gray-50 opacity-80")}>
+                        <div key={item.id} onClick={() => setActiveDocumentId(item.id)} className={cn("px-5 py-4 border-b border-gray-50 flex items-start gap-3 transition-colors cursor-pointer group", isSelected ? "bg-[#eef2ff] border-l-4 border-l-blue-500" : "bg-white hover:bg-gray-50 opacity-80")}>
                             <div className="mt-0.5">{isLatest ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Clock className="w-4 h-4 text-gray-400" />}</div>
                             <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center mb-0.5">
-                                <span className={cn("text-[13px] font-bold truncate", isLatest ? "text-green-800" : "text-gray-700")}>Versi {item.versi} {isLatest && "(Terbaru)"}</span>
-                                <span className={cn("text-[11px] font-medium whitespace-nowrap ml-2", isLatest ? "text-green-600" : "text-gray-500")}>{formatDate(item.createdAt)}</span>
-                            </div>
-                            <p className="text-[11px] text-gray-600 truncate">Oleh: {item.pengunggah?.name || "Tidak diketahui"}</p>
-                            <p className="text-[10px] text-gray-400 mt-1 truncate">{item.name} • {formatBytes(item.ukuran)}</p>
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <span className={cn("text-[13px] font-bold truncate", isLatest ? "text-green-800" : "text-gray-700")}>Versi {item.versi} {isLatest && "(Terbaru)"}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={cn("text-[11px] font-medium whitespace-nowrap ml-2", isLatest ? "text-green-600" : "text-gray-500")}>{formatDate(item.createdAt)}</span>
+                                        {/* Tombol Delete Single (Hanya Admin) */}
+                                        {isAdmin && (
+                                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, type: 'single', doc: item }); }} className="text-gray-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-gray-600 truncate">Oleh: {item.pengunggah?.name || "Tidak diketahui"}</p>
+                                <p className="text-[10px] text-gray-400 mt-1 truncate">{item.name} • {formatBytes(item.ukuran)}</p>
                             </div>
                         </div>
                     );
-                })}
-            </CardContent>
+                    })}
+                </CardContent>
             </Card>
-        </div>
+            </div>
 
-        {/* KOLOM KANAN (PREVIEW) */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col h-full min-h-0">
-            <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col h-full min-h-0">
-                <div className="px-6 py-4 border-b border-gray-100 bg-white flex justify-between items-center shrink-0">
+            {/* KOLOM KANAN (PREVIEW) */}
+            <div className="col-span-12 lg:col-span-8 flex flex-col h-full min-h-0">
+            <Card className="rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col h-full min-h-0">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0"><FileText className="w-5 h-5" /></div>
                         <div className="overflow-hidden">
-                            <h2 className="text-[15px] font-bold text-gray-900 leading-tight truncate">
-                                {history.find(d => d.id === activeDocumentId)?.name || `Preview LED (${activePeriode})`}
-                            </h2>
-                            <p className="text-[12px] text-gray-500 truncate">
-                            {activeDocumentId && history.find(d => d.id === activeDocumentId)
-                                ? `Versi ${history.find(d => d.id === activeDocumentId).versi} • ${formatDate(history.find(d => d.id === activeDocumentId).createdAt)}`
-                                : 'Live Preview (docx)'}
-                            </p>
+                            <h2 className="text-[15px] font-bold text-gray-900 leading-tight truncate">{activeDoc?.name || `Preview LED (${activePeriode})`}</h2>
+                            <p className="text-[12px] text-gray-500 truncate">{activeDoc ? `Versi ${activeDoc.versi} • ${formatDate(activeDoc.createdAt)}` : 'Live Preview (docx)'}</p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={handleDownload} disabled={!activeDocumentId} className="rounded-lg h-9 text-xs font-bold text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm gap-2 shrink-0 ml-4">
-                    <Download className="w-4 h-4 text-gray-500" /> Unduh (.docx)
-                    </Button>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                        {/* BADGE STATUS DOKUMEN */}
+                        {activeDoc && (
+                        <span className={cn("px-3 py-1.5 text-[11px] font-bold rounded-md border tracking-wide uppercase shadow-sm", activeDoc.status === 'FINAL' ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-700 border-green-200")}>
+                            {activeDoc.status}
+                        </span>
+                        )}
+                        <Button variant="outline" onClick={handleDownload} disabled={!activeDocumentId} className="rounded-lg h-9 text-xs font-bold text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm gap-2">
+                            <Download className="w-4 h-4 text-gray-500" /> Unduh
+                        </Button>
+                    </div>
                 </div>
                 
                 <div className="flex-1 bg-gray-100/50 p-6 overflow-y-auto flex justify-center min-h-0">
                     <div className="w-[800px] max-w-full relative">
-                        {isPreviewLoading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 rounded shadow-sm"><span className="font-bold text-gray-600 animate-pulse">Merender Dokumen...</span></div>}
-                        <div ref={previewRef} className="bg-white border border-gray-200 shadow-sm min-h-[1000px] pb-12">
-                            <div className="h-full flex items-center justify-center text-gray-400 p-12 text-center">
-                                {!activeDocumentId ? `Belum ada dokumen aktif untuk periode ${activePeriode}...` : ""}
-                            </div>
+                        {isPreviewLoading && <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10"><span className="font-bold text-gray-600 animate-pulse">Merender Dokumen...</span></div>}
+                        <div ref={previewRef} className="bg-white border shadow-sm min-h-[1000px] pb-12">
+                            <div className="h-full flex items-center justify-center text-gray-400 p-12 text-center">{!activeDocumentId ? `Belum ada dokumen aktif untuk periode ${activePeriode}...` : ""}</div>
                         </div>
                     </div>
                 </div>
             </Card>
+            </div>
         </div>
+
+        {/* MODAL SOFT DELETE */}
+        {deleteModal.isOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex items-center justify-between">
+                        <h3 className="text-red-700 font-bold flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Peringatan</h3>
+                        <button onClick={closeDeleteModal} className="text-red-400 hover:text-red-700"><X className="w-5 h-5" /></button>
+                    </div>
+                    <div className="p-6">
+                        {deleteModal.type === 'single' ? (
+                            <>
+                            <p className="text-gray-700 text-sm mb-4">Anda akan <strong>MENGHAPUS</strong> dokumen <strong>Versi {deleteModal.doc?.versi}</strong> ({deleteModal.doc?.name}).</p>
+                            {deleteModal.doc?.status === 'FINAL' && (
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                    <p className="text-red-800 text-xs font-bold mb-2">DOKUMEN INI BERSTATUS FINAL!</p>
+                                    <p className="text-red-700 text-xs mb-3">Untuk melanjutkan, ketik: <span className="font-mono bg-white px-1 border border-red-200 select-all">SAYA YAKIN HAPUS FINAL</span></p>
+                                    <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} className="w-full px-3 py-2 text-sm border border-red-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Ketik di sini..." />
+                                </div>
+                            )}
+                            </>
+                        ) : (
+                            <>
+                            <p className="text-gray-700 text-sm mb-4">Anda akan <strong>MENGHAPUS SEMUA VERSI DRAFT</strong> di periode <strong>{activePeriode}</strong>. Tindakan ini tidak memengaruhi dokumen FINAL.</p>
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                <p className="text-red-700 text-xs mb-3">Untuk melanjutkan, ketik: <span className="font-mono bg-white px-1 border border-red-200 select-all">HAPUS SEMUA {activePeriode}</span></p>
+                                <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} className="w-full px-3 py-2 text-sm border border-red-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500" placeholder={`HAPUS SEMUA ${activePeriode}`} />
+                            </div>
+                            </>
+                        )}
+                    </div>
+                    <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+                    <Button variant="outline" onClick={closeDeleteModal}>Batal</Button>
+                    <Button variant="destructive" onClick={executeDelete} disabled={isDeleteDisabled()}>
+                        {isDeleting ? "Menghapus..." : "Hapus Dokumen"}
+                    </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         </div>
-    </div>
     );
 }
 
