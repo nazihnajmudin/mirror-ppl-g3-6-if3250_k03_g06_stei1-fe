@@ -33,7 +33,9 @@ export function SidebarProdi() {
 
     useEffect(() => {
         getCurrentUser().then((user) => {
-            if (user.prodiId) {
+            if (user.role === 'SUPER_ADMIN' || user.role === 'PIMPINAN') {
+                setBerandaHref('/dashboard');
+            } else if (user.prodiId) {
                 setBerandaHref(`/dashboard-prodi?prodiId=${user.prodiId}`);
             }
         }).catch(() => {});
