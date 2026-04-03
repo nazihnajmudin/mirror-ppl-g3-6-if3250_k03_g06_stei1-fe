@@ -26,58 +26,47 @@ export interface User {
   updatedAt: string;
 }
 
-export interface ProdiOption {
+export interface Prodi {
   id: string;
   fullname: string;
-  abbreviation: string | null;
-  degree: string | null;
+  abbreviation?: string;
+  degree?: string;
+  accreditation?: AccreditationInfo;
+  createdAt: string;
+  updatedAt: string;
 }
 
+export interface AccreditationInfo {
+  id: string;
+  prodiId: string;
+  grade?: string;
+  startDate?: string;
+  endDate?: string;
+  certificateUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-export interface DashboardData {
+export interface ProdiAssignment {
+  id: string;
+  userId: string;
+  prodiId: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+  };
   prodi: {
     id: string;
     fullname: string;
-    abbreviation: string | null;
-    degree: string | null;
+    abbreviation?: string;
   };
-  accreditation: {
-    grade: string | null;
-    startDate: string | null;
-    endDate: string | null;
-  };
-  documents: {
-    lkps: {
-      status: string;
-      progress: number;
-    };
-    led: {
-      status: string;
-      progress: number;
-    };
-  };
-  simulationScore: number;
-  criteria: Array<{
-    id: string;
-    code: string;
-    name: string;
-    progress: number;
-  }>;
-  criticalIndicators: Array<{
-    id: string;
-    name: string;
-    status: string;
-  }>;
-  recentActivities: Array<{
-    id: string;
-    user: string;
-    action: string;
-    timestamp: string;
-  }>;
-  accessInfo?: {
-    canEdit: boolean;
-    canAccess: boolean;
-    role: string;
-    isReadOnly: boolean;
-  };
+}
+
+export interface CreatePenugasanInput {
+  userId: string;
+  prodiId: string;
+  kriteriaIds: string[];
 }
