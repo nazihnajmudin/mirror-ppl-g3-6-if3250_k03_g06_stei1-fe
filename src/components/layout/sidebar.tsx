@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
     LayoutDashboard, 
@@ -11,14 +11,18 @@ import {
     Download, 
     Users, 
     Settings, 
-    LogOut 
+    LogOut,
+    Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import apiClient from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/errors";
 
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard},
+    { name: 'Dashboard Prodi', href: '/prodi-saya', icon: BookOpen},
     { name: 'Data Kuantitatif Institusi', href: '#', icon: Database},
-    { name: 'Program Studi', href: '#', icon: BookOpen},
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
     { name: 'Simulasi Skor Akreditasi', href: '#', icon: Calculator},
     { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download},
@@ -28,42 +32,69 @@ const navigation = [
 
 export function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            await apiClient.post("/auth/logout");
+            localStorage.removeItem("token");
+            router.push("/login");
+        } catch (err: unknown) {
+            const message = getErrorMessage(err) || "Gagal logout";
+            console.error("Logout error:", message);
+            // Still redirect even if logout endpoint fails
+            localStorage.removeItem("token");
+            router.push("/login");
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
 
     return (
-    <div className="flex h-screen w-64 flex-col border-r bg-gray-50/40 px-4 py-6">
-        <div className="mb-8 px-4">
-        <h1 className="text-xl font-bold text-gray-900">Portal STEI</h1>
-        </div>
-        
-        <nav className="flex flex-1 flex-col gap-1">
-        {navigation.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
+        <div className="flex h-screen w-full flex-col border-r bg-gray-50/40 px-4 py-6">
+            <div className="mb-8 px-4">
+                <h1 className="text-xl font-bold text-gray-900">Portal STEI</h1>
+            </div>
+            
+            <nav className="flex flex-1 flex-col gap-1">
+                {navigation.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || pathname.startsWith(item.href);
 
-            return (
-            <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                "flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                    ? "bg-gray-800 text-white" 
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                )}
-            >
-                <Icon className="h-4 w-4" />
-                {item.name}
-            </Link>
-            );
-        })}
-        </nav>
+                    return (
+                        <Link
+                            key={item.name}
+                            href={item.href}
+                            className={cn(
+                                "flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
+                                isActive
+                                    ? "bg-gray-800 text-white" 
+                                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                            )}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {item.name}
+                        </Link>
+                    );
+                })}
+            </nav>
 
-        <div className="mt-auto pt-4 border-t">
-        <button className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
-            <LogOut className="h-4 w-4" />
-            Logout
-        </button>
+            <div className="mt-auto pt-4 border-t">
+                <button 
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-red-100 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isLoggingOut ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <LogOut className="h-4 w-4" />
+                    )}
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                </button>
+            </div>
         </div>
-    </div>
     );
 }
