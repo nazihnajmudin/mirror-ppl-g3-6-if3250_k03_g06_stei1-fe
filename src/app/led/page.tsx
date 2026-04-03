@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, Download, FileText, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
+import * as docx from "docx-preview";
 
 // DUMMY DATA UNTUK RIWAYAT UPLOAD
 const mockHistory = [
@@ -15,6 +16,47 @@ const mockHistory = [
 ];
 
 export default function DokumenLEDPage() {
+    const previewRef = useRef<HTMLDivElement>(null);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+    // Fungsi untuk mengambil file dari Backend dan me-rendernya
+    const loadPreview = async (prodiId: string, periode: string) => {
+        setIsPreviewLoading(true);
+        try {
+        // 1. Panggil API Export (Pastikan responseType 'blob')
+        const response = await apiClient.get(`/led/export/${prodiId}/${periode}`, {
+            responseType: 'blob'
+        });
+        
+        const fileBlob = response.data;
+
+        // 2. Render Blob ke dalam div referensi
+        if (previewRef.current) {
+            previewRef.current.innerHTML = ""; 
+            
+            await docx.renderAsync(fileBlob, previewRef.current, undefined, {
+                className: "docx",
+                inWrapper: true,
+                ignoreWidth: false,
+                ignoreHeight: false,
+                ignoreFonts: false, 
+                breakPages: true,
+            });
+        }
+        } catch (error) {
+            console.error("Gagal me-load preview", error);
+            if (previewRef.current) {
+                previewRef.current.innerHTML = "<p class='text-red-500 text-center'>Gagal memuat preview dokumen.</p>";
+            }
+        } finally {
+            setIsPreviewLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadPreview("dummy-prodiId", "2025");
+    }, []);
+
     // State untuk drag & drop file
     const [isDragging, setIsDragging] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -101,15 +143,15 @@ export default function DokumenLEDPage() {
     const handleDownload = async (prodiId: string, periode: string) => {
     try {
         // Endpoint download
-        // const response = await apiClient.get(`/led/export/${prodiId}/${periode}`, {
-        //   responseType: 'blob' // Penting untuk download file
-        // });
-        // const url = window.URL.createObjectURL(new Blob([response.data]));
-        // const link = document.createElement('a');
-        // link.href = url;
-        // link.setAttribute('download', 'LED_Document.docx');
-        // document.body.appendChild(link);
-        // link.click();
+        const response = await apiClient.get(`/led/export/${prodiId}/${periode}`, {
+            responseType: 'blob'
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'LED_Document.docx');
+        document.body.appendChild(link);
+        link.click();
         
         alert("Fitur unduh dipanggil!");
     } catch (error) {
@@ -254,36 +296,27 @@ export default function DokumenLEDPage() {
                 </Button>
             </div>
 
-            {/* AREA PREVIEW KONTEN (MOCK) */}
+            {/* AREA PREVIEW KONTEN */}
             <div className="flex-1 bg-gray-100/50 p-6 overflow-y-auto flex justify-center">
-                
-                {/* Kertas A4 Mockup */}
-                <div className="bg-white border border-gray-200 shadow-sm w-[800px] max-w-full min-h-[1000px] p-12 relative">
-                
-                <div className="border-b-2 border-black pb-4 mb-8 text-center">
-                    <h1 className="text-xl font-bold uppercase">Laporan Evaluasi Diri (LED)</h1>
-                    <h2 className="text-lg font-bold mt-1">Program Studi Teknik Informatika</h2>
-                    <p className="text-sm mt-2">Institut Teknologi Bandung</p>
-                </div>
-                
-                <div className="space-y-6 text-[14px] leading-relaxed text-gray-800 text-justify">
-                    <div>
-                    <h3 className="font-bold text-[15px] mb-2">BAB I. PENDAHULUAN</h3>
-                    <p className="mb-3">Laporan Evaluasi Diri (LED) Program Studi Teknik Informatika disusun sebagai bagian dari pemenuhan instrumen akreditasi LAM INFOKOM. Evaluasi diri ini merupakan hasil refleksi yang komprehensif dari seluruh pemangku kepentingan (stakeholders) program studi...</p>
-                    <p>Penyusunan dokumen ini dikoordinasikan oleh Tim Akreditasi Program Studi dengan melibatkan dosen, tenaga kependidikan, mahasiswa, alumni, dan mitra industri.</p>
+            
+            <div className="w-[800px] max-w-full relative">
+                {isPreviewLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded shadow-sm">
+                        <span className="font-bold text-gray-500">Memuat Dokumen...</span>
                     </div>
-                    
-                    <div>
-                    <h3 className="font-bold text-[15px] mb-2">A. Kondisi Eksternal</h3>
-                    <p>Perkembangan teknologi informasi dan komunikasi yang sangat pesat di era Revolusi Industri 4.0 menuntut Program Studi Teknik Informatika untuk terus beradaptasi. Tingginya permintaan industri terhadap lulusan yang memiliki kompetensi di bidang Artificial Intelligence, Cloud Computing, dan Cybersecurity menjadi tantangan sekaligus peluang...</p>
-                    </div>
-
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded text-center text-gray-500 italic mt-10 text-xs">
-                    -- Preview dokumen disederhanakan. Unduh dokumen fisik untuk membaca isi secara lengkap --
+                )}
+                
+                {/* Kontainer tempat dokumen Word akan di-render */}
+                <div 
+                ref={previewRef} 
+                className="bg-white border border-gray-200 shadow-sm min-h-[1000px]"
+                >
+                    {/* Fallback teks jika render belum berjalan */}
+                    <div className="p-12 text-center text-gray-400">
+                        Menginisialisasi penampil dokumen...
                     </div>
                 </div>
-
-                </div>
+            </div>
 
             </div>
             </Card>
