@@ -5,7 +5,11 @@ export interface LKPSVersion {
   id: string;
   name: string;
   createdAt: string;
-  prodi: { fullname: string };
+  originalFilename?: string;
+  prodi: { 
+    fullname: string;
+    abbreviation?: string;
+  };
   content: any;
 }
 
