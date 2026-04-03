@@ -14,7 +14,9 @@ import {
     Download,
     Settings,
     LogOut,
-    Loader2
+    Loader2,
+    Database,
+    Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -23,14 +25,16 @@ import { getErrorMessage } from "@/lib/errors";
 
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Dashboard Prodi', href: '/prodi-saya', icon: LayoutDashboard },
     { name: 'Profil Program Studi', href: '/profil-prodi', icon: User },
-    { name: 'Data LKPS', href: '#', icon: FileSpreadsheet },
-    { name: 'Dokumen LED', href: '#', icon: FileText },
+    { name: 'LKPS', href: '/dashboard/lkps', icon: Database },
+    { name: 'LED', href: '/led', icon: FileText },
     { name: 'Dokumen Eviden', href: '#', icon: FolderOpen },
     { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
     { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
     { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
+    { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users },
     { name: 'Pengaturan', href: '#', icon: Settings },
 ];
 
@@ -43,12 +47,14 @@ export function SidebarProdi() {
         setIsLoggingOut(true);
         try {
             await apiClient.post("/auth/logout");
-            localStorage.removeItem("token");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
             router.push("/login");
         } catch (err: unknown) {
             const message = getErrorMessage(err) || "Gagal logout";
             console.error("Logout error:", message);
-            localStorage.removeItem("token");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
             router.push("/login");
         } finally {
             setIsLoggingOut(false);
@@ -56,7 +62,7 @@ export function SidebarProdi() {
     };
 
     return (
-        <div className="flex h-screen w-64 flex-col border-r bg-gray-50/40 px-4 py-6">
+        <div className="flex h-screen w-64 flex-col border-r bg-gray-50/40 px-4 py-6 overflow-y-auto">
             <div className="mb-8 px-4">
                 <h1 className="text-xl font-bold text-gray-900">Portal STEI</h1>
             </div>
@@ -64,7 +70,7 @@ export function SidebarProdi() {
             <nav className="flex flex-1 flex-col gap-1">
                 {navigation.map((item) => {
                     const Icon = item.icon;
-                    const isActive = pathname === item.href || pathname.startsWith(item.href);
+                    const isActive = pathname === item.href || (item.href !== '#' && pathname.startsWith(item.href));
 
             return (
             <Link
