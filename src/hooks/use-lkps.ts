@@ -1,0 +1,35 @@
+import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
+
+export interface LKPSVersion {
+  id: string;
+  name: string;
+  createdAt: string;
+  prodi: { fullname: string };
+  content: any;
+}
+
+export function useLKPS(prodiId?: string) {
+  const [versions, setVersions] = useState<LKPSVersion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchVersions = async () => {
+    if (!prodiId) return;
+    setLoading(true);
+    try {
+      const response = await apiClient.get(`/lkps/history/${prodiId}`);
+      setVersions(response.data.data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVersions();
+  }, [prodiId]);
+
+  return { versions, loading, error, refresh: fetchVersions };
+}
