@@ -11,8 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import apiClient from "@/lib/api-client"
+import { isAxiosError, getErrorStatus, getErrorMessage } from "@/lib/errors";
 
 const TOKEN_STORAGE_KEY = "access_token";
 
@@ -54,21 +54,15 @@ export default function LoginPage() {
     } catch (error: unknown) {
       console.error("Login Error:", error);
 
-      if (axios.isAxiosError(error)) {
-        const statusCode = error.response?.status;
-        const errorMessage = error.response?.data?.message || "Terjadi kesalahan saat login.";
+      const statusCode = getErrorStatus(error);
+      const errorMessage = getErrorMessage(error);
 
-        if (statusCode === 401) {
-          form.setError("root", { message: "Email atau password salah." });
-        } else if (statusCode === 403) {
-          form.setError("root", { message: "Akun Anda tidak memiliki akses ke portal ini." });
-        } else {
-          form.setError("root", { message: errorMessage });
-        }
-      } else if (error instanceof Error) {
-        form.setError("root", { message: error.message });
+      if (statusCode === 401) {
+        form.setError("root", { message: "Email atau password salah." });
+      } else if (statusCode === 403) {
+        form.setError("root", { message: "Akun Anda tidak memiliki akses ke portal ini." });
       } else {
-        form.setError("root", { message: "Terjadi kesalahan ketika login." });
+        form.setError("root", { message: errorMessage });
       }
     } finally {
       setIsLoading(false);

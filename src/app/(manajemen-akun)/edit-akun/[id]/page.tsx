@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sidebar } from "@/components/layout/sidebar"
+import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
 import type { ApiResponse, ProdiOption, User, UserRole } from "@/types/api.types"
 
@@ -79,8 +79,8 @@ export default function EditAkunPage() {
         role: user.role,
         prodiId: user.prodiId,
       })
-    } catch (err: any) {
-      const apiMessage = err?.response?.data?.message
+    } catch (err: unknown) {
+      const apiMessage = (err as any)?.response?.data?.message
       if (apiMessage === "Pengguna tidak ditemukan") {
         setLoadError("Data akun tidak ditemukan atau endpoint prodi-options belum aktif. Pastikan backend sudah restart dengan perubahan terbaru.")
       } else {
@@ -113,8 +113,8 @@ export default function EditAkunPage() {
       })
 
       router.push("/manajemen-akun")
-    } catch (err: any) {
-      form.setError("root", { message: err?.response?.data?.message || "Gagal menyimpan perubahan akun." })
+    } catch (err: unknown) {
+      form.setError("root", { message: getErrorMessage(err) || "Gagal menyimpan perubahan akun." })
     } finally {
       setIsLoading(false)
     }
@@ -134,21 +134,16 @@ export default function EditAkunPage() {
       }
 
       await bootstrap()
-    } catch (err: any) {
-      form.setError("root", { message: err?.response?.data?.message || "Gagal mengubah status akun." })
+    } catch (err: unknown) {
+      form.setError("root", { message: getErrorMessage(err) || "Gagal mengubah status akun." })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB]">
-      <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
-        <Sidebar />
-      </div>
-
-      <main className="flex-grow md:ml-[240px] p-8 min-h-screen">
-        <div className="max-w-2xl mx-auto">
+    <>
+      <div className="max-w-2xl mx-auto">
           <Link href="/manajemen-akun" className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-6 transition-colors group">
             <ChevronLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
             Kembali ke Manajemen Akun
@@ -293,7 +288,6 @@ export default function EditAkunPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   )
 }

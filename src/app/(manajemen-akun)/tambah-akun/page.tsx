@@ -7,13 +7,12 @@ import { ChevronLeft, Loader2, Save, AlertCircle } from "lucide-react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sidebar } from "@/components/layout/sidebar"
+import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
 import type { ApiResponse, ProdiOption, UserRole } from "@/types/api.types"
 
@@ -56,8 +55,8 @@ export default function TambahPenggunaPage() {
       try {
         const response = await apiClient.get<ApiResponse<ProdiOption[]>>("/accounts/prodi-options")
         setProdis(response.data.data ?? [])
-      } catch (err: any) {
-        const apiMessage = err?.response?.data?.message
+      } catch (err: unknown) {
+        const apiMessage = (err as any)?.response?.data?.message
         if (apiMessage === "Pengguna tidak ditemukan") {
           setLoadProdiError("Endpoint prodi-options belum aktif. Restart backend dulu agar dropdown prodi bisa digunakan.")
         } else {
@@ -105,13 +104,8 @@ export default function TambahPenggunaPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB]">
-      <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
-        <Sidebar />
-      </div>
-
-      <main className="flex-grow md:ml-[240px] p-8 min-h-screen">
-        <div className="max-w-2xl mx-auto">
+    <>
+      <div className="max-w-2xl mx-auto">
           <Link href="/manajemen-akun" className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-6 transition-colors group">
             <ChevronLeft className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
             Kembali ke Manajemen Akun
@@ -277,7 +271,6 @@ export default function TambahPenggunaPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </>
   )
 }
