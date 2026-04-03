@@ -43,9 +43,7 @@ export default function LoginPage() {
       
       if (token) {
         localStorage.setItem(TOKEN_STORAGE_KEY, token);
-        
-        router.push("/dashboard");
-        
+        router.push("/");
         router.refresh();
       } else {
         throw new Error("Format response server tidak sesuai (Token Missing).");
