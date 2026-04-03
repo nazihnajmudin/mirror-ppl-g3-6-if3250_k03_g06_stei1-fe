@@ -3,13 +3,12 @@
 import * as React from "react"
 import Link from "next/link"
 import { Plus, RefreshCw } from "lucide-react"
-import { Header } from "@/components/layout/header"
-import { Sidebar } from "@/components/layout/sidebar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
 import type { ApiResponse, User, UserRole } from "@/types/api.types"
 
@@ -41,8 +40,8 @@ export default function ManajemenAkunPage() {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>("/accounts")
       setUsers(response.data?.data ?? [])
-    } catch (err: any) {
-      const message = err?.response?.data?.message || "Gagal memuat data akun."
+    } catch (err: unknown) {
+      const message = getErrorMessage(err) || "Gagal memuat data akun."
       setError(message)
     } finally {
       setLoading(false)
@@ -54,33 +53,27 @@ export default function ManajemenAkunPage() {
   }, [loadUsers])
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB]">
-      <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
-        <Sidebar />
-      </div>
-
-      <main className="flex-grow md:ml-[240px] p-8 min-h-screen">
-        <Header />
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manajemen Akun</h1>
-            <p className="text-sm text-gray-500 mt-1">Kelola akun pengguna sesuai data backend.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={loadUsers} variant="outline" className="rounded-full">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+    <>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Manajemen Akun</h1>
+          <p className="text-sm text-gray-500 mt-1">Kelola akun pengguna sesuai data backend.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={loadUsers} variant="outline" className="rounded-full">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+          <Link href="/tambah-akun">
+            <Button className="bg-black hover:bg-gray-800 text-white rounded-full px-6 py-2.5 text-sm flex items-center gap-2 shadow-md">
+              <Plus className="w-4 h-4" />
+              Tambah Pengguna
             </Button>
-            <Link href="/tambah-akun">
-              <Button className="bg-black hover:bg-gray-800 text-white rounded-full px-6 py-2.5 text-sm flex items-center gap-2 shadow-md">
-                <Plus className="w-4 h-4" />
-                Tambah Pengguna
-              </Button>
-            </Link>
-          </div>
-        </header>
+          </Link>
+        </div>
+      </header>
 
-        <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           <CardHeader className="px-6 py-5 border-b border-gray-100 bg-white">
             <CardTitle className="text-lg font-bold text-gray-900">Daftar Pengguna</CardTitle>
           </CardHeader>
@@ -158,7 +151,6 @@ export default function ManajemenAkunPage() {
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+    </>
   )
 }
