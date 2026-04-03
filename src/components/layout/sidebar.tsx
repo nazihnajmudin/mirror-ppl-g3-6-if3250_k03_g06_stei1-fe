@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import apiClient from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
+import { useUser } from "@/hooks/useUser";
 
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard},
@@ -29,13 +30,14 @@ const navigation = [
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
     { name: 'Simulasi Skor Akreditasi', href: '#', icon: Calculator},
     { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download},
-    { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users},
+    { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users, roleRequired: ['SUPER_ADMIN', 'PIMPINAN']},
     { name: 'Pengaturan', href: '#', icon: Settings},
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const { user } = useUser();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const handleLogout = async () => {
@@ -48,7 +50,6 @@ export function Sidebar() {
         } catch (err: unknown) {
             const message = getErrorMessage(err) || "Gagal logout";
             console.error("Logout error:", message);
-            // Still redirect even if logout endpoint fails
             localStorage.removeItem("access_token");
             localStorage.removeItem("accessToken");
             router.push("/login");
@@ -57,6 +58,13 @@ export function Sidebar() {
         }
     };
 
+    // Filter navigation based on user role
+    const filteredNavigation = navigation.filter(item => {
+        if (!item.roleRequired) return true;
+        if (!user) return false;
+        return (item.roleRequired as string[]).includes(user.role);
+    });
+
     return (
         <div className="flex h-screen w-full flex-col border-r bg-gray-50/40 px-4 py-6">
             <div className="mb-8 px-4">
@@ -64,9 +72,9 @@ export function Sidebar() {
             </div>
             
             <nav className="flex flex-1 flex-col gap-1">
-                {navigation.map((item) => {
+                {filteredNavigation.map((item) => {
                     const Icon = item.icon;
-                    const isActive = pathname === item.href || pathname.startsWith(item.href);
+                    const isActive = pathname === item.href || (item.href !== '#' && pathname.startsWith(item.href));
 
                     return (
                         <Link
