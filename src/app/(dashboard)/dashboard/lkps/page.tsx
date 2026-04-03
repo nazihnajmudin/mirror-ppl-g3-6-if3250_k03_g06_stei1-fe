@@ -28,17 +28,21 @@ export default function LKPSSelectorPage() {
         const currentUser = userRes.data.data;
         setUser(currentUser);
 
-        // Redirect if not PIMPINAN or SUPER_ADMIN
-        if (currentUser.role === 'KAPRODI' || currentUser.role === 'TIM_PRODI') {
-          if (currentUser.prodiId) {
-            router.push(`/dashboard/lkps/${currentUser.prodiId}`);
-            return;
-          }
-        }
+        // Fetch prodi yang berhak diakses oleh user ini
+        const prodiRes = await apiClient.get('/prodi/my-prodi');
+        const accessibleProdis = prodiRes.data.data;
+        setProdis(accessibleProdis);
 
-        // If PIMPINAN or SUPER_ADMIN, fetch all prodis
-        const prodiRes = await apiClient.get('/prodi');
-        setProdis(prodiRes.data.data);
+        // LOGIKA REDIRECT:
+        // Jika bukan Admin/Pimpinan DAN hanya punya 1 prodi akses
+        if (
+          currentUser.role !== 'SUPER_ADMIN' && 
+          currentUser.role !== 'PIMPINAN' && 
+          accessibleProdis.length === 1
+        ) {
+          router.push(`/dashboard/lkps/${accessibleProdis[0].id}`);
+          return;
+        }
       } catch (err) {
         console.error("Failed to fetch data");
       } finally {
@@ -65,7 +69,11 @@ export default function LKPSSelectorPage() {
     <div className="flex flex-col gap-8 max-w-6xl mx-auto">
       <div>
         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Manajemen LKPS</h1>
-        <p className="text-gray-500 mt-2 text-lg">Pilih Program Studi untuk mengelola atau meninjau dokumen LKPS.</p>
+        <p className="text-gray-500 mt-2 text-lg">
+          {user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN' 
+            ? "Pilih Program Studi untuk meninjau dokumen LKPS."
+            : "Pilih Program Studi penugasan Anda untuk mengelola dokumen LKPS."}
+        </p>
       </div>
 
       <div className="relative">
@@ -112,7 +120,7 @@ export default function LKPSSelectorPage() {
         <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
           <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-gray-900">Program Studi tidak ditemukan</h3>
-          <p className="text-gray-500">Coba gunakan kata kunci pencarian lain.</p>
+          <p className="text-gray-500">Anda tidak memiliki akses ke Program Studi manapun.</p>
         </div>
       )}
     </div>
