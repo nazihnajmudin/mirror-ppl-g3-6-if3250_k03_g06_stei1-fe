@@ -11,13 +11,15 @@ import {
     Download, 
     Users, 
     Settings, 
-    LogOut 
+    LogOut,
+    FileText // Tambahkan import ikon ini
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard},
     { name: 'Dashboard Prodi', href: '/prodi-saya', icon: BookOpen},
+    { name: 'Dokumen LED', href: '/led', icon: FileText}, 
     { name: 'Data Kuantitatif Institusi', href: '#', icon: Database},
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
     { name: 'Simulasi Skor Akreditasi', href: '#', icon: Calculator},
@@ -38,7 +40,7 @@ export function Sidebar() {
         <nav className="flex flex-1 flex-col gap-1">
         {navigation.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href);
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
             <Link
