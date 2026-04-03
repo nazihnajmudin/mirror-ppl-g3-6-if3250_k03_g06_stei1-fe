@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuthGuard } from "@/hooks/useAuthGuard"
-import { SidebarProdi } from "@/components/layout/sidebar-prodi"
+import { Sidebar } from "@/components/layout/sidebar"
 import { Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 
