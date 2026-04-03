@@ -17,41 +17,53 @@ import {
     Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import apiClient from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
+import { getCurrentUser } from "@/lib/api-prodi";
 
-const navigation = [
-    { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Profil Program Studi', href: '/profil-prodi', icon: User },
-    { name: 'Data LKPS', href: '#', icon: FileSpreadsheet },
-    { name: 'Dokumen LED', href: '#', icon: FileText },
-    { name: 'Dokumen Eviden', href: '#', icon: FolderOpen },
-    { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
-    { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },
-    { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
-    { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
-    { name: 'Pengaturan', href: '#', icon: Settings },
-];
+const TOKEN_KEY = "access_token";
+const LEGACY_TOKEN_KEY = "accessToken";
 
 export function SidebarProdi() {
     const pathname = usePathname();
     const router = useRouter();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [berandaHref, setBerandaHref] = useState('/dashboard-prodi');
+
+    useEffect(() => {
+        getCurrentUser().then((user) => {
+            if (user.prodiId) {
+                setBerandaHref(`/dashboard-prodi?prodiId=${user.prodiId}`);
+            }
+        }).catch(() => {});
+    }, []);
+
+    const navigation = [
+        { name: 'Beranda', href: berandaHref, icon: LayoutDashboard },
+        { name: 'Profil Program Studi', href: '/profil-prodi', icon: User },
+        { name: 'Data LKPS', href: '#', icon: FileSpreadsheet },
+        { name: 'Dokumen LED', href: '#', icon: FileText },
+        { name: 'Dokumen Eviden', href: '#', icon: FolderOpen },
+        { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
+        { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },
+        { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
+        { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
+        { name: 'Pengaturan', href: '#', icon: Settings },
+    ];
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
         try {
             await apiClient.post("/auth/logout");
-            localStorage.removeItem("token");
-            router.push("/login");
         } catch (err: unknown) {
             const message = getErrorMessage(err) || "Gagal logout";
             console.error("Logout error:", message);
-            localStorage.removeItem("token");
-            router.push("/login");
         } finally {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(LEGACY_TOKEN_KEY);
             setIsLoggingOut(false);
+            router.push("/login");
         }
     };
 
@@ -64,7 +76,8 @@ export function SidebarProdi() {
             <nav className="flex flex-1 flex-col gap-1">
                 {navigation.map((item) => {
                     const Icon = item.icon;
-                    const isActive = pathname === item.href || pathname.startsWith(item.href);
+                    const hrefPath = item.href.split('?')[0];
+                    const isActive = hrefPath !== '#' && (pathname === hrefPath || pathname.startsWith(hrefPath + '/'));
 
             return (
             <Link
