@@ -28,7 +28,7 @@ export default function DashboardProdiLayout({
     return (
         <div className="flex min-h-screen bg-gray-50">
             <aside className="hidden md:flex md:w-64 md:fixed md:h-screen md:flex-col bg-white border-r border-gray-200 overflow-y-auto">
-                <SidebarProdi />
+                <Sidebar/>
             </aside>
             <main className="w-full flex-1 flex flex-col md:ml-64">
                 <div className="md:hidden h-16" />
