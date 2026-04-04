@@ -20,6 +20,23 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useUser } from "@/hooks/useUser";
+
+const roleLabel: Record<string, string> = {
+    SUPER_ADMIN: "Super Admin",
+    PIMPINAN: "Pimpinan",
+    KAPRODI: "Kaprodi",
+    TIM_PRODI: "Tim Prodi",
+};
+
+function getInitials(name: string): string {
+    return name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? "")
+        .join("")
+}
 
 const navigation = [
     { name: 'Beranda', href: '/dashboard', icon: LayoutDashboard},
@@ -37,6 +54,11 @@ const navigation = [
 export function Header() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const pathname = usePathname();
+    const { user } = useUser();
+
+    const displayName = user?.name || user?.email || "Memuat..."
+    const displayRole = user ? (roleLabel[user.role] ?? user.role) : "Memuat..."
+    const initials = user?.name ? getInitials(user.name) : "—"
 
     return (
         <>
@@ -114,21 +136,6 @@ export function Header() {
                     <Avatar className="w-10 h-10 border border-gray-100 shadow-sm">
                         <AvatarImage src="" alt="Profile" />
                         <AvatarFallback className="bg-blue-50 text-blue-600 text-[13px] font-bold">{initials}</AvatarFallback>
-                    </Avatar>
-                </div>
-            </div>
-        </>
-    );
-}
- src="" alt="Profile" />
-                        <AvatarFallback className="bg-blue-50 text-blue-600 text-[13px] font-bold">JM</AvatarFallback>
-                    </Avatar>
-                </div>
-            </div>
-        </>
-    );
-}
-0 text-blue-600 text-[13px] font-bold">JM</AvatarFallback>
                     </Avatar>
                 </div>
             </div>
