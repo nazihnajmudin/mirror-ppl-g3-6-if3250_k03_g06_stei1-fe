@@ -90,7 +90,7 @@ export function ImportDialog({ prodiId, onImportSuccess, defaultPeriode }: Impor
             <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
               <Calendar className="w-4 h-4" /> Periode Akreditasi
             </label>
-            <Select value={periode} onValueChange={setPeriode}>
+            <Select value={periode} onValueChange={(val) => setPeriode(val ?? "")}>
               <SelectTrigger className="w-full bg-white border-gray-200">
                 <SelectValue placeholder="Pilih Periode" />
               </SelectTrigger>
