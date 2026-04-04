@@ -5,7 +5,6 @@ import Link from "next/link";
 import { 
     LayoutDashboard, 
     Database, 
-    BookOpen, 
     Activity, 
     Calculator, 
     Download, 
@@ -18,8 +17,8 @@ import {
     User,
     FolderOpen,
     ClipboardList,
-    Building2,
-    FileSpreadsheet
+    FileSpreadsheet,
+    Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -36,17 +35,14 @@ export function Sidebar() {
     // Accordion state
     const [expanded, setExpanded] = useState<'umum' | 'prodi' | null>(null);
 
-    // Auto-expand based on current pathname
+    // Auto-expand accordions if a unique child is active
     useEffect(() => {
-        if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/lkps')) {
+        const umumPaths = ['/manajemen-akun'];
+        const prodiPaths = ['/profil-prodi', '/penugasan'];
+        
+        if (umumPaths.some(p => pathname.startsWith(p))) {
             setExpanded('umum');
-        } else if (
-            pathname.startsWith('/prodi-saya') || 
-            pathname.startsWith('/dashboard/lkps') || 
-            pathname.startsWith('/led') || 
-            pathname.startsWith('/profil-prodi') || 
-            pathname.startsWith('/penugasan')
-        ) {
+        } else if (prodiPaths.some(p => pathname.startsWith(p))) {
             setExpanded('prodi');
         }
     }, [pathname]);
@@ -76,105 +72,94 @@ export function Sidebar() {
     const isSuperOrPimpinan = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
 
     // Style constants
-    const parentBaseClass = "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300";
-    const activeParentClass = "bg-gray-900 text-white shadow-md";
-    const inactiveParentClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+    const globalItemClass = "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 mb-1";
+    const activeGlobalClass = "bg-gray-900 text-white shadow-md";
+    const inactiveGlobalClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+
+    const parentToggleClass = "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300 mb-1";
+    const activeParentClass = "bg-blue-600 text-white shadow-md"; // Blue for parent when expanded
+    const inactiveParentClass = "text-gray-700 bg-gray-50 hover:bg-gray-100";
     
     const submenuBaseClass = "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ml-4 mb-1";
-    const activeSubmenuClass = "bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-bold";
+    const activeSubmenuClass = "bg-blue-100/50 text-blue-700 border-l-4 border-blue-600 font-bold"; // Lighter BG for sub
     const inactiveSubmenuClass = "text-gray-500 hover:bg-gray-50 hover:text-gray-900";
 
     return (
         <div className="flex h-screen w-full flex-col border-r bg-white px-4 py-6 shadow-sm overflow-hidden">
-            <div className="mb-10 px-4 flex items-center gap-3">
+            {/* Header */}
+            <div className="mb-8 px-4 flex items-center gap-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
                 <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Portal STEI</h1>
             </div>
             
-            <nav className="flex flex-1 flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar">
+            <nav className="flex flex-1 flex-col overflow-y-auto pr-2 custom-scrollbar">
                 
-                {/* GRUP 1: MENU UMUM (INSTITUSI) */}
-                <div className="space-y-1">
-                    <button
-                        onClick={() => toggleSection('umum')}
-                        className={cn(
-                            parentBaseClass,
-                            expanded === 'umum' ? activeParentClass : inactiveParentClass
-                        )}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Building2 className="h-5 w-5" />
-                            <span>Menu Umum</span>
+                {/* 1. MUTUAL ITEMS (GLOBAL TOP) */}
+                <Link href="/dashboard" className={cn(globalItemClass, pathname === '/dashboard' ? activeGlobalClass : inactiveGlobalClass)}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    Beranda
+                </Link>
+                <Link href="/dashboard/lkps" className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
+                    <FileSpreadsheet className="h-4 w-4" />
+                    LKPS
+                </Link>
+                <Link href="/led" className={cn(globalItemClass, pathname === '/led' ? activeGlobalClass : inactiveGlobalClass)}>
+                    <FileText className="h-4 w-4" />
+                    LED
+                </Link>
+                <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
+                    <Activity className="h-4 w-4" />
+                    Monitoring & Evaluasi
+                </Link>
+                <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
+                    <Download className="h-4 w-4" />
+                    Unduh Laporan/Dokumen
+                </Link>
+
+                <div className="my-4 border-t border-gray-100" />
+
+                {/* 2. MENU UMUM ACCORDION (UNIQUE) */}
+                {isSuperOrPimpinan && (
+                    <div className="mb-2">
+                        <button
+                            onClick={() => toggleSection('umum')}
+                            className={cn(parentToggleClass, expanded === 'umum' ? activeParentClass : inactiveParentClass)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Shield className="h-4 w-4" />
+                                <span>Menu Umum</span>
+                            </div>
+                            <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'umum' && "rotate-180")} />
+                        </button>
+                        <div className={cn("overflow-hidden transition-all duration-300", expanded === 'umum' ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
+                            <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
+                                <Calculator className="h-4 w-4" />
+                                Simulasi Skor Akreditasi
+                            </Link>
+                            <Link href="/manajemen-akun" className={cn(submenuBaseClass, pathname.startsWith('/manajemen-akun') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <Users className="h-4 w-4" />
+                                Manajemen Akun
+                            </Link>
                         </div>
-                        <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'umum' && "rotate-180")} />
-                    </button>
-
-                    <div className={cn(
-                        "overflow-hidden transition-all duration-500 ease-in-out",
-                        expanded === 'umum' ? "max-h-96 opacity-100 mt-2" : "max-h-0 opacity-0"
-                    )}>
-                        <Link href="/dashboard" className={cn(submenuBaseClass, pathname === '/dashboard' ? activeSubmenuClass : inactiveSubmenuClass)}>
-                            <LayoutDashboard className="h-4 w-4" />
-                            Beranda
-                        </Link>
-                        <Link href="/prodi-saya" className={cn(submenuBaseClass, pathname === '/prodi-saya' ? activeSubmenuClass : inactiveSubmenuClass)}>
-                            <BookOpen className="h-4 w-4" />
-                            Dashboard Prodi
-                        </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Database className="h-4 w-4" />
-                            Data Kuantitatif Institusi
-                        </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Activity className="h-4 w-4" />
-                            Monitoring & Evaluasi
-                        </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Calculator className="h-4 w-4" />
-                            Simulasi Skor Akreditasi
-                        </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Download className="h-4 w-4" />
-                            Unduh Laporan/Dokumen
-                        </Link>
                     </div>
-                </div>
+                )}
 
-                {/* GRUP 2: MENU PRODI (OPERASIONAL) */}
-                <div className="space-y-1 mt-2">
+                {/* 3. MENU PRODI ACCORDION (UNIQUE) */}
+                <div className="mb-2">
                     <button
                         onClick={() => toggleSection('prodi')}
-                        className={cn(
-                            parentBaseClass,
-                            expanded === 'prodi' ? activeParentClass : inactiveParentClass
-                        )}
+                        className={cn(parentToggleClass, expanded === 'prodi' ? activeParentClass : inactiveParentClass)}
                     >
                         <div className="flex items-center gap-3">
-                            <BookOpen className="h-5 w-5" />
+                            <Database className="h-4 w-4" />
                             <span>Menu Prodi</span>
                         </div>
                         <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'prodi' && "rotate-180")} />
                     </button>
-
-                    <div className={cn(
-                        "overflow-hidden transition-all duration-500 ease-in-out",
-                        expanded === 'prodi' ? "max-h-[600px] opacity-100 mt-2" : "max-h-0 opacity-0"
-                    )}>
-                        <Link href="/dashboard" className={cn(submenuBaseClass, pathname === '/dashboard' ? activeSubmenuClass : inactiveSubmenuClass)}>
-                            <LayoutDashboard className="h-4 w-4" />
-                            Beranda
-                        </Link>
+                    <div className={cn("overflow-hidden transition-all duration-300", expanded === 'prodi' ? "max-h-60 opacity-100 mt-1" : "max-h-0 opacity-0")}>
                         <Link href="/profil-prodi" className={cn(submenuBaseClass, pathname === '/profil-prodi' ? activeSubmenuClass : inactiveSubmenuClass)}>
                             <User className="h-4 w-4" />
                             Profil Program Studi
-                        </Link>
-                        <Link href="/dashboard/lkps" className={cn(submenuBaseClass, pathname.startsWith('/dashboard/lkps') ? activeSubmenuClass : inactiveSubmenuClass)}>
-                            <FileSpreadsheet className="h-4 w-4" />
-                            Data LKPS
-                        </Link>
-                        <Link href="/led" className={cn(submenuBaseClass, pathname === '/led' ? activeSubmenuClass : inactiveSubmenuClass)}>
-                            <FileText className="h-4 w-4" />
-                            Dokumen LED
                         </Link>
                         <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
                             <FolderOpen className="h-4 w-4" />
@@ -188,54 +173,24 @@ export function Sidebar() {
                             <Calculator className="h-4 w-4" />
                             Simulasi Skor Prodi
                         </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Activity className="h-4 w-4" />
-                            Monitoring & Evaluasi
-                        </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Download className="h-4 w-4" />
-                            Unduh Laporan/Dokumen
-                        </Link>
                     </div>
                 </div>
 
-                {/* MENU GLOBAL */}
-                <div className="mt-6 pt-6 border-t border-gray-100 space-y-1">
-                    {isSuperOrPimpinan && (
-                        <Link
-                            href="/manajemen-akun"
-                            className={cn(
-                                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all",
-                                pathname.startsWith('/manajemen-akun') ? activeParentClass : inactiveParentClass
-                            )}
-                        >
-                            <Users className="h-5 w-5" />
-                            Manajemen Akun
-                        </Link>
-                    )}
-                    <Link
-                        href="#"
-                        className={cn(
-                            "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all",
-                            inactiveParentClass
-                        )}
-                    >
-                        <Settings className="h-5 w-5" />
+                <div className="mt-auto pt-4 space-y-1">
+                    <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
+                        <Settings className="h-4 w-4" />
                         Pengaturan
                     </Link>
+                    <button 
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+                    >
+                        {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                        {isLoggingOut ? "Keluar..." : "Log Out"}
+                    </button>
                 </div>
             </nav>
-
-            <div className="mt-auto pt-4 border-t border-gray-100">
-                <button 
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
-                >
-                    {isLoggingOut ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
-                    {isLoggingOut ? "Keluar..." : "Log Out"}
-                </button>
-            </div>
         </div>
     );
 }
