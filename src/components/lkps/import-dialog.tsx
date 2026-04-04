@@ -33,12 +33,12 @@ export function ImportDialog({ prodiId, onImportSuccess, defaultPeriode }: Impor
 
     setLoading(true);
     const formData = new FormData();
-    formData.append("file", file);
     formData.append("name", `Revisi LKPS - ${file.name}`);
     formData.append("periode", periode);
     if (prodiId) {
       formData.append("prodiId", prodiId);
     }
+    formData.append("file", file);
 
     try {
       await apiClient.post("/lkps/confirm", formData, {
