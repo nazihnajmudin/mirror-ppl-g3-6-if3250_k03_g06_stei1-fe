@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, ExternalLink, Check, X } from "lucide-react"
+import { Plus, Pencil, Trash2, ExternalLink, Check, X, BookOpen, Eye, Loader2 } from "lucide-react"
 import { HeaderKaprodi } from "@/components/layout/header-kaprodi"
+import { useSearchParams, useRouter } from "next/navigation"
 
 import {
   Avatar,
@@ -44,6 +45,8 @@ import {
   deleteProdiMember,
   getProdiMembers,
 } from "@/lib/api-prodi"
+import apiClient from "@/lib/api-client"
+import { useUser } from "@/hooks/useUser"
 
 interface ProdiData {
   fullname: string
@@ -79,9 +82,83 @@ function makeInitials(name: string): string {
     .join("")
 }
 
-export default function ProfilProdiPage() {
+// ============================================================================
+// 1. KOMPONEN TABEL PRODI
+// ============================================================================
+function ProdiListView() {
+    const router = useRouter();
+    const [prodis, setProdis] = React.useState<any[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchProdis = async () => {
+            try {
+                const response = await apiClient.get('/prodi/my-prodi');
+                setProdis(response.data.data || []);
+            } catch (error) {
+                console.error("Gagal mengambil data prodi", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProdis();
+    }, []);
+
+    if (isLoading) return <div className="p-8 text-gray-500">Memuat daftar program studi...</div>;
+
+    return (
+    <div className="space-y-6">
+        <header className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Profil Program Studi Institusi</h1>
+            <p className="text-sm text-gray-500 mt-1">Pilih Program Studi untuk mengelola informasi profil dan tim.</p>
+        </header>
+
+        <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <Table>
+            <TableHeader className="bg-gray-50/50">
+            <TableRow>
+                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4">Program Studi</TableHead>
+                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 text-right">Aksi</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {prodis.map((prodi) => (
+                <TableRow key={prodi.id} className="hover:bg-gray-50/40">
+                <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-900 rounded-lg text-white shadow-sm"><BookOpen className="w-4 h-4" /></div>
+                    <span className="text-[14px] font-bold text-gray-900">{prodi.fullname}</span>
+                    </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 text-right">
+                    <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push(`/profil-prodi?prodiId=${prodi.id}`)}
+                    className="h-8 text-xs font-bold gap-2"
+                    >
+                    <Eye className="w-4 h-4" /> Lihat Profil
+                    </Button>
+                </TableCell>
+                </TableRow>
+            ))}
+            {prodis.length === 0 && (
+                <TableRow><TableCell colSpan={2} className="text-center py-8 text-gray-500">Belum ada data program studi.</TableCell></TableRow>
+            )}
+            </TableBody>
+        </Table>
+        </Card>
+    </div>
+    );
+}
+
+// ============================================================================
+// 2. KOMPONEN DETAIL PROFIL
+// ============================================================================
+function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, canEdit: boolean }) {
+  const router = useRouter()
+  const { user } = useUser()
   const [activeTab, setActiveTab] = React.useState<"informasi" | "tim">("informasi")
-  const [prodiId, setProdiId] = React.useState<string>(DEFAULT_PRODI_ID)
   const [prodiData, setProdiData] = React.useState<ProdiData>({
     fullname: "",
     akreditasi: "",
@@ -110,20 +187,11 @@ export default function ProfilProdiPage() {
   const [formErrors, setFormErrors] = React.useState<{ name?: string; email?: string; general?: string }>({})
 
   React.useEffect(() => {
-    const init = async () => {
-      try {
-        const me = await getCurrentUser()
-        const resolvedProdiId = me.prodiId || DEFAULT_PRODI_ID
-        setProdiId(resolvedProdiId)
-        await loadProdiData(resolvedProdiId)
-        await loadTimProdi(resolvedProdiId)
-      } catch {
-        await loadProdiData(DEFAULT_PRODI_ID)
-        await loadTimProdi(DEFAULT_PRODI_ID)
-      }
+    if (targetProdiId) {
+        loadProdiData(targetProdiId)
+        loadTimProdi(targetProdiId)
     }
-    init()
-  }, [])
+  }, [targetProdiId])
 
   const loadProdiData = async (id: string) => {
     try {
@@ -179,9 +247,9 @@ export default function ProfilProdiPage() {
 
   const handleSimpanProfil = async () => {
     try {
-      await updateProdi(prodiId, { fullname: editForm.fullname, degree: editForm.degree })
+      await updateProdi(targetProdiId, { fullname: editForm.fullname, degree: editForm.degree })
       if (editForm.akreditasi || editForm.certificateUrl) {
-        await upsertAccreditation(prodiId, { grade: editForm.akreditasi, certificateUrl: editForm.certificateUrl })
+        await upsertAccreditation(targetProdiId, { grade: editForm.akreditasi, certificateUrl: editForm.certificateUrl })
       }
       setProdiData({
         ...editForm,
@@ -221,7 +289,7 @@ export default function ProfilProdiPage() {
         email: newEmail.trim(),
         role: newRole,
         password: "password123",
-        prodiId,
+        prodiId: targetProdiId,
       })
 
       const savedName = savedUser.name || newNama
@@ -276,6 +344,8 @@ export default function ProfilProdiPage() {
     }
   }
 
+  const isGuest = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
+
   return (
     <div className="relative">
       {/* Toast */}
@@ -294,39 +364,46 @@ export default function ProfilProdiPage() {
       {/* Header Card */}
       <Card className="rounded-xl border border-gray-200 bg-white shadow-sm mb-6">
           <CardContent className="px-6 py-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold">
-                {prodiData.fullname ? prodiData.fullname.slice(0, 2).toUpperCase() : "—"}
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-gray-900">{prodiData.fullname || "Memuat..."}</h1>
-                  {prodiData.akreditasi && (
-                    <Badge className="bg-green-50 text-green-600 border-none shadow-none rounded-md px-2.5 py-0.5 text-xs font-bold">
-                      {prodiData.akreditasi}
-                    </Badge>
-                  )}
+            <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold">
+                    {prodiData.fullname ? prodiData.fullname.slice(0, 2).toUpperCase() : "—"}
                 </div>
-                <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                  <span>{prodiData.degree}</span>
-                  {prodiData.endDate && (
-                    <>
-                      <span>·</span>
-                      {prodiData.certificateUrl ? (
-                        <button
-                          onClick={() => setShowSertifikat(true)}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition-colors font-medium"
-                        >
-                          Berlaku s.d. {prodiData.endDate}
-                          <ExternalLink className="w-3 h-3" />
-                        </button>
-                      ) : (
-                        <span>Berlaku s.d. {prodiData.endDate}</span>
-                      )}
-                    </>
-                  )}
+                <div>
+                    <div className="flex items-center gap-3 mb-1">
+                    <h1 className="text-2xl font-bold text-gray-900">{prodiData.fullname || "Memuat..."}</h1>
+                    {prodiData.akreditasi && (
+                        <Badge className="bg-green-50 text-green-600 border-none shadow-none rounded-md px-2.5 py-0.5 text-xs font-bold">
+                        {prodiData.akreditasi}
+                        </Badge>
+                    )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                    <span>{prodiData.degree}</span>
+                    {prodiData.endDate && (
+                        <>
+                        <span>·</span>
+                        {prodiData.certificateUrl ? (
+                            <button
+                            onClick={() => setShowSertifikat(true)}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition-colors font-medium"
+                            >
+                            Berlaku s.d. {prodiData.endDate}
+                            <ExternalLink className="w-3 h-3" />
+                            </button>
+                        ) : (
+                            <span>Berlaku s.d. {prodiData.endDate}</span>
+                        )}
+                        </>
+                    )}
+                    </div>
                 </div>
-              </div>
+                </div>
+                {isGuest && (
+                    <Button variant="ghost" onClick={() => router.push('/profil-prodi')} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 gap-2 font-semibold text-sm">
+                        &larr; Kembali ke Daftar
+                    </Button>
+                )}
             </div>
           </CardContent>
         </Card>
@@ -359,36 +436,38 @@ export default function ProfilProdiPage() {
           <Card className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <CardHeader className="px-6 py-5 border-b border-gray-100 flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold text-gray-900">Informasi Program Studi</CardTitle>
-              {isEditing ? (
-                <div className="flex gap-2">
-                  <Button
+              {canEdit && (
+                isEditing ? (
+                    <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBatalEdit}
+                        className="rounded-lg h-9 px-4 text-xs font-bold border-gray-200 text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-1.5"
+                    >
+                        <X className="w-3.5 h-3.5" />
+                        Batal
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleSimpanProfil}
+                        className="rounded-lg h-9 px-4 text-xs font-bold bg-black hover:bg-gray-800 text-white transition-all flex items-center gap-1.5"
+                    >
+                        <Check className="w-3.5 h-3.5" />
+                        Simpan
+                    </Button>
+                    </div>
+                ) : (
+                    <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleBatalEdit}
-                    className="rounded-lg h-9 px-4 text-xs font-bold border-gray-200 text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-1.5"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Batal
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSimpanProfil}
-                    className="rounded-lg h-9 px-4 text-xs font-bold bg-black hover:bg-gray-800 text-white transition-all flex items-center gap-1.5"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    Simpan
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={openEditProfil}
-                  className="rounded-lg h-9 px-4 text-xs font-bold border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-95 shadow-sm flex items-center gap-2"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit Profil
-                </Button>
+                    onClick={openEditProfil}
+                    className="rounded-lg h-9 px-4 text-xs font-bold border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-95 shadow-sm flex items-center gap-2"
+                    >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit Profil
+                    </Button>
+                )
               )}
             </CardHeader>
             <CardContent className="px-6 py-6 space-y-8">
@@ -499,13 +578,15 @@ export default function ProfilProdiPage() {
                 <CardTitle className="text-lg font-bold text-gray-900">Tim Prodi</CardTitle>
                 <p className="text-sm text-gray-500 mt-0.5">{timProdi.length} Anggota</p>
               </div>
-              <Button
-                onClick={openTambahAnggota}
-                className="bg-black hover:bg-gray-800 text-white rounded-full px-5 py-2 text-sm flex items-center gap-2 transition-all active:scale-95 shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                Tambah Anggota
-              </Button>
+              {canEdit && (
+                <Button
+                    onClick={openTambahAnggota}
+                    className="bg-black hover:bg-gray-800 text-white rounded-full px-5 py-2 text-sm flex items-center gap-2 transition-all active:scale-95 shadow-md"
+                >
+                    <Plus className="w-4 h-4" />
+                    Tambah Anggota
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -515,7 +596,7 @@ export default function ProfilProdiPage() {
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">EMAIL</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">ROLE</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">STATUS</TableHead>
-                    <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider text-right">AKSI</TableHead>
+                    {canEdit && <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider text-right">AKSI</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -552,16 +633,18 @@ export default function ProfilProdiPage() {
                           {member.isActive ? "Aktif" : "Tidak Aktif"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => confirmHapusAnggota(member.id)}
-                          className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+                      {canEdit && (
+                        <TableCell className="px-6 py-4 text-right">
+                            <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmHapusAnggota(member.id)}
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                            <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -698,5 +781,66 @@ export default function ProfilProdiPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ============================================================================
+// 3. MAIN CONTENT (SUSPENSE & RBAC)
+// ============================================================================
+function ProfilProdiContent() {
+    const { user, loading } = useUser();
+    const searchParams = useSearchParams();
+    const urlProdiId = searchParams.get("prodiId");
+    const [accessibleProdis, setAccessibleProdis] = React.useState<any[]>([]);
+    const [isProdiLoading, setIsProdiLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchMyProdis = async () => {
+            if (!user) return;
+            try {
+                const res = await apiClient.get('/prodi/my-prodi');
+                setAccessibleProdis(res.data.data || []);
+            } catch (err) {
+                console.error("Failed to fetch my prodis");
+            } finally {
+                setIsProdiLoading(false);
+            }
+        };
+        fetchMyProdis();
+    }, [user]);
+
+    if (loading || isProdiLoading) return <div className="p-8 text-gray-500">Memuat otorisasi...</div>;
+    if (!user) return null;
+
+    const isGuestRole = user.role === 'PIMPINAN' || user.role === 'SUPER_ADMIN';
+    const canEdit = user.role === 'KAPRODI'; // Biasanya Kaprodi yang edit profil prodi
+
+    // Skenario 1: Ada prodiId di URL
+    if (urlProdiId) {
+        const hasAccess = accessibleProdis.some(p => p.id === urlProdiId);
+        if (!hasAccess && !isGuestRole) {
+            return <div className="p-8 text-red-500 font-bold">Akses ditolak.</div>;
+        }
+        return <ProdiDetailView targetProdiId={urlProdiId} canEdit={canEdit && !isGuestRole} />;
+    }
+
+    // Skenario 2: Tidak ada prodiId, tapi punya lebih dari 1 prodi atau Admin
+    if (isGuestRole || accessibleProdis.length > 1) {
+        return <ProdiListView />;
+    }
+
+    // Skenario 3: Cuma punya 1 prodi akses
+    if (accessibleProdis.length === 1) {
+        return <ProdiDetailView targetProdiId={accessibleProdis[0].id} canEdit={canEdit} />;
+    }
+
+    return <div className="p-8 text-red-500 font-bold">Akses ditolak atau Program Studi tidak ditemukan.</div>;
+}
+
+export default function ProfilProdiPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 flex items-center gap-3 text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /> Memuat...</div>}>
+      <ProfilProdiContent />
+    </React.Suspense>
   )
 }

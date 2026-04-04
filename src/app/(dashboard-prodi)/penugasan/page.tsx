@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { HeaderKaprodi } from "@/components/layout/header-kaprodi"
+import { useSearchParams, useRouter } from "next/navigation"
 
 import {
   Avatar,
@@ -30,9 +31,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Trash2 } from "lucide-react"
-import { getCurrentUser, getProdiMembers, getPenugasan, addPenugasan, deletePenugasan } from "@/lib/api-prodi"
+import { Trash2, BookOpen, Eye, Loader2 } from "lucide-react"
+import { getCurrentUser, getProdiMembers, getPenugasan, addPenugasan, deletePenugasan, getProdiById } from "@/lib/api-prodi"
 import type { User, ProdiAssignment } from "@/types/api.types"
+import apiClient from "@/lib/api-client"
+import { useUser } from "@/hooks/useUser"
 
 const kriteria = [
   { id: "K1", label: "Visi, Misi, Tujuan & Strategi" },
@@ -46,8 +49,6 @@ const kriteria = [
   { id: "K9", label: "Luaran dan Capaian Tridharma" },
 ]
 
-const DEFAULT_PRODI_ID = "prodi-if"
-
 function makeInitials(name: string): string {
   return name
     .split(" ")
@@ -57,8 +58,83 @@ function makeInitials(name: string): string {
     .join("")
 }
 
-export default function PenugasanPage() {
-  const [prodiId, setProdiId] = React.useState<string>(DEFAULT_PRODI_ID)
+// ============================================================================
+// 1. KOMPONEN TABEL PRODI
+// ============================================================================
+function ProdiListView() {
+    const router = useRouter();
+    const [prodis, setProdis] = React.useState<any[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchProdis = async () => {
+            try {
+                const response = await apiClient.get('/prodi/my-prodi');
+                setProdis(response.data.data || []);
+            } catch (error) {
+                console.error("Gagal mengambil data prodi", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProdis();
+    }, []);
+
+    if (isLoading) return <div className="p-8 text-gray-500">Memuat daftar program studi...</div>;
+
+    return (
+    <div className="space-y-6">
+        <header className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Penugasan Tim Prodi Institusi</h1>
+            <p className="text-sm text-gray-500 mt-1">Pilih Program Studi untuk mengelola penugasan tim.</p>
+        </header>
+
+        <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <Table>
+            <TableHeader className="bg-gray-50/50">
+            <TableRow>
+                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4">Program Studi</TableHead>
+                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 text-right">Aksi</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {prodis.map((prodi) => (
+                <TableRow key={prodi.id} className="hover:bg-gray-50/40">
+                <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-900 rounded-lg text-white shadow-sm"><BookOpen className="w-4 h-4" /></div>
+                    <span className="text-[14px] font-bold text-gray-900">{prodi.fullname}</span>
+                    </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 text-right">
+                    <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push(`/penugasan?prodiId=${prodi.id}`)}
+                    className="h-8 text-xs font-bold gap-2"
+                    >
+                    <Eye className="w-4 h-4" /> Kelola Penugasan
+                    </Button>
+                </TableCell>
+                </TableRow>
+            ))}
+            {prodis.length === 0 && (
+                <TableRow><TableCell colSpan={2} className="text-center py-8 text-gray-500">Belum ada data program studi.</TableCell></TableRow>
+            )}
+            </TableBody>
+        </Table>
+        </Card>
+    </div>
+    );
+}
+
+// ============================================================================
+// 2. KOMPONEN UTAMA PENUGASAN DETAIL
+// ============================================================================
+function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
+  const router = useRouter()
+  const { user } = useUser()
+  const [prodiName, setProdiName] = React.useState("Program Studi")
   const [anggotaList, setAnggotaList] = React.useState<User[]>([])
   const [penugasanList, setPenugasanList] = React.useState<ProdiAssignment[]>([])
   const [selectedUserId, setSelectedUserId] = React.useState("")
@@ -69,18 +145,18 @@ export default function PenugasanPage() {
   const [toast, setToast] = React.useState<{ message: string; type: "success" | "error" } | null>(null)
 
   React.useEffect(() => {
-    const init = async () => {
-      try {
-        const me = await getCurrentUser()
-        const resolvedProdiId = me.prodiId || DEFAULT_PRODI_ID
-        setProdiId(resolvedProdiId)
-        await loadData(resolvedProdiId)
-      } catch {
-        await loadData(DEFAULT_PRODI_ID)
-      }
+    if (targetProdiId) {
+        loadData(targetProdiId)
+        fetchProdiName(targetProdiId)
     }
-    init()
-  }, [])
+  }, [targetProdiId])
+
+  const fetchProdiName = async (id: string) => {
+      try {
+          const res = await getProdiById(id)
+          setProdiName(res.fullname)
+      } catch {}
+  }
 
   const loadData = async (id: string) => {
     try {
@@ -124,7 +200,7 @@ export default function PenugasanPage() {
     }
 
     try {
-      const result = await addPenugasan({ userId: selectedUserId, prodiId })
+      const result = await addPenugasan({ userId: selectedUserId, prodiId: targetProdiId })
       setPenugasanList((prev) => [result, ...prev])
       setSelectedKriteria([])
       setSelectedUserId("")
@@ -161,6 +237,8 @@ export default function PenugasanPage() {
       ? penugasanList
       : penugasanList.filter((p) => p.user?.id === filterAnggota)
 
+  const isGuest = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN'
+
   return (
     <div className="relative">
       {/* Toast */}
@@ -176,9 +254,16 @@ export default function PenugasanPage() {
 
       <HeaderKaprodi />
 
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Penugasan Anggota Tim Prodi</h1>
-        <p className="text-sm text-gray-500 mt-1">Kelola penugasan kriteria akreditasi kepada anggota Tim Prodi.</p>
+      <header className="mb-8 flex justify-between items-start">
+        <div>
+            <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
+            <p className="text-sm text-gray-500 mt-1">Kelola penugasan kriteria akreditasi kepada anggota Tim Prodi.</p>
+        </div>
+        {isGuest && (
+            <Button variant="ghost" onClick={() => router.push('/penugasan')} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 gap-2 font-semibold text-sm">
+                &larr; Kembali ke Daftar
+            </Button>
+        )}
       </header>
 
       {/* Summary Cards */}
@@ -405,5 +490,65 @@ export default function PenugasanPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ============================================================================
+// 3. MAIN CONTENT (SUSPENSE & RBAC)
+// ============================================================================
+function PenugasanPageContent() {
+    const { user, loading } = useUser();
+    const searchParams = useSearchParams();
+    const urlProdiId = searchParams.get("prodiId");
+    const [accessibleProdis, setAccessibleProdis] = React.useState<any[]>([]);
+    const [isProdiLoading, setIsProdiLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchMyProdis = async () => {
+            if (!user) return;
+            try {
+                const res = await apiClient.get('/prodi/my-prodi');
+                setAccessibleProdis(res.data.data || []);
+            } catch (err) {
+                console.error("Failed to fetch my prodis");
+            } finally {
+                setIsProdiLoading(false);
+            }
+        };
+        fetchMyProdis();
+    }, [user]);
+
+    if (loading || isProdiLoading) return <div className="p-8 text-gray-500">Memuat otorisasi...</div>;
+    if (!user) return null;
+
+    const isGuestRole = user.role === 'PIMPINAN' || user.role === 'SUPER_ADMIN';
+
+    // Skenario 1: Ada prodiId di URL
+    if (urlProdiId) {
+        const hasAccess = accessibleProdis.some(p => p.id === urlProdiId);
+        if (!hasAccess && !isGuestRole) {
+            return <div className="p-8 text-red-500 font-bold">Akses ditolak.</div>;
+        }
+        return <PenugasanDetailView targetProdiId={urlProdiId} />;
+    }
+
+    // Skenario 2: Tidak ada prodiId, tapi punya lebih dari 1 prodi atau Admin
+    if (isGuestRole || accessibleProdis.length > 1) {
+        return <ProdiListView />;
+    }
+
+    // Skenario 3: Cuma punya 1 prodi akses
+    if (accessibleProdis.length === 1) {
+        return <PenugasanDetailView targetProdiId={accessibleProdis[0].id} />;
+    }
+
+    return <div className="p-8 text-red-500 font-bold">Akses ditolak atau Program Studi tidak ditemukan.</div>;
+}
+
+export default function PenugasanPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 flex items-center gap-3 text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /> Memuat...</div>}>
+      <PenugasanPageContent />
+    </React.Suspense>
   )
 }
