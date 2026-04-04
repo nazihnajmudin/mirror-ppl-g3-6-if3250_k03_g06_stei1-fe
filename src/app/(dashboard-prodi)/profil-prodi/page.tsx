@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Plus, Pencil, Trash2, ExternalLink, Check, X } from "lucide-react"
 import { HeaderKaprodi } from "@/components/layout/header-kaprodi"
-import { SidebarProdi } from "@/components/layout/sidebar-prodi"
 
 import {
   Avatar,
@@ -278,7 +277,7 @@ export default function ProfilProdiPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB] relative">
+    <div className="relative">
       {/* Toast */}
       {toast && (
         <div
@@ -290,15 +289,10 @@ export default function ProfilProdiPage() {
         </div>
       )}
 
-      <div className="w-[240px] fixed h-full bg-white border-r border-gray-200 hidden md:flex items-center justify-center text-gray-400 text-sm font-medium">
-        <SidebarProdi />
-      </div>
+      <HeaderKaprodi />
 
-      <main className="flex-grow md:ml-[240px] p-8 min-h-screen">
-        <HeaderKaprodi />
-
-        {/* Header Card */}
-        <Card className="rounded-xl border border-gray-200 bg-white shadow-sm mb-6">
+      {/* Header Card */}
+      <Card className="rounded-xl border border-gray-200 bg-white shadow-sm mb-6">
           <CardContent className="px-6 py-5">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold">
@@ -575,8 +569,7 @@ export default function ProfilProdiPage() {
             </CardContent>
           </Card>
         )}
-      </main>
-
+      
       {/* Dialog Sertifikat Akreditasi */}
       <Dialog open={showSertifikat} onOpenChange={setShowSertifikat}>
         <DialogContent className="max-w-2xl bg-white">

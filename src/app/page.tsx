@@ -22,13 +22,7 @@ export default function Home() {
     // Redirect based on user role
     if (user.role === "SUPER_ADMIN" || user.role === "PIMPINAN") {
       router.push("/dashboard")
-    } else if (user.role === "KAPRODI") {
-      if (user.prodiId) {
-        router.push(`/dashboard-prodi?prodiId=${user.prodiId}`)
-      } else {
-        router.push("/prodi-saya")
-      }
-    } else if (user.role === "TIM_PRODI") {
+    } else {
       router.push("/prodi-saya")
     }
   }, [user, loading, router])

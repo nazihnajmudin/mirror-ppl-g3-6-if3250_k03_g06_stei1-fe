@@ -88,18 +88,24 @@ export function Sidebar() {
     return (
         <div className="flex h-screen w-full flex-col border-r bg-white px-4 py-6 shadow-sm overflow-hidden">
             {/* BRANDING */}
-            <div className="mb-8 px-4 flex items-center gap-3">
+            <Link href="/dashboard" className="mb-8 px-4 flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
                 <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Portal STEI</h1>
-            </div>
+            </Link>
             
             <nav className="flex flex-1 flex-col overflow-y-auto pr-2 custom-scrollbar">
                 
                 {/* 1. SHARED ITEMS (MUTUAL) - TOP LEVEL */}
                 <div className="space-y-1">
-                    <Link href="/dashboard" className={cn(globalItemClass, pathname === '/dashboard' ? activeGlobalClass : inactiveGlobalClass)}>
+                    {isSuperOrPimpinan && (
+                        <Link href="/dashboard" className={cn(globalItemClass, (pathname === '/dashboard' || pathname === '/') ? activeGlobalClass : inactiveGlobalClass)}>
+                            <LayoutDashboard className="h-4 w-4" />
+                            Beranda
+                        </Link>
+                    )}
+                    <Link href="/prodi-saya" className={cn(globalItemClass, (pathname === '/prodi-saya' || pathname.startsWith('/dashboard-prodi')) ? activeGlobalClass : inactiveGlobalClass)}>
                         <LayoutDashboard className="h-4 w-4" />
-                        Beranda
+                        Dashboard Prodi
                     </Link>
                     <Link href="/dashboard/lkps" className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
                         <FileSpreadsheet className="h-4 w-4" />

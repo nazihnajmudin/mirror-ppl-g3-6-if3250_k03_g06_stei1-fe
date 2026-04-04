@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/lib/api-client';
 
 export interface LKPSVersion {
@@ -6,6 +6,7 @@ export interface LKPSVersion {
   name: string;
   createdAt: string;
   originalFilename?: string;
+  periode?: string;
   prodi: { 
     fullname: string;
     abbreviation?: string;
@@ -18,7 +19,7 @@ export function useLKPS(prodiId?: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchVersions = async () => {
+  const fetchVersions = useCallback(async () => {
     if (!prodiId) return;
     setLoading(true);
     try {
@@ -29,11 +30,11 @@ export function useLKPS(prodiId?: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [prodiId]);
 
   useEffect(() => {
     fetchVersions();
-  }, [prodiId]);
+  }, [fetchVersions]);
 
   return { versions, loading, error, refresh: fetchVersions };
 }
