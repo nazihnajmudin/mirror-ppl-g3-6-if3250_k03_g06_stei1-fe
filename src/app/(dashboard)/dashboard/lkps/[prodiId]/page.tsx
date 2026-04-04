@@ -62,20 +62,22 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
   const versions = allVersions.filter(v => (v.periode || new Date(v.createdAt).getFullYear().toString()) === activePeriode);
 
   useEffect(() => {
+    const currentYear = new Date().getFullYear().toString();
+    const periods = new Set<string>([currentYear]);
+    
     if (allVersions.length > 0) {
-      const periods = Array.from(new Set(allVersions.map(v => v.periode || new Date(v.createdAt).getFullYear().toString()))).sort();
-      const currentYear = new Date().getFullYear().toString();
-      if (!periods.includes(currentYear)) {
-          periods.push(currentYear);
-          periods.sort();
-      }
-      setAvailablePeriods(periods);
-      // Ensure we have an active period set if none is selected
-      if (!activePeriode && periods.length > 0) {
-          setActivePeriode(periods[periods.length - 1]);
-      }
-    } else {
-        setAvailablePeriods([new Date().getFullYear().toString()]);
+      allVersions.forEach(v => {
+        const p = v.periode || new Date(v.createdAt).getFullYear().toString();
+        periods.add(p);
+      });
+    }
+    
+    const sortedPeriods = Array.from(periods).sort();
+    setAvailablePeriods(sortedPeriods);
+    
+    // Ensure we have an active period set
+    if (!activePeriode) {
+        setActivePeriode(currentYear);
     }
   }, [allVersions, activePeriode]);
 

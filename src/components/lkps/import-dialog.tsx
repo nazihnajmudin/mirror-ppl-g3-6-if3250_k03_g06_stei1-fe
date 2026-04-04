@@ -40,6 +40,11 @@ export function ImportDialog({ prodiId, onImportSuccess, defaultPeriode }: Impor
     }
     formData.append("file", file);
 
+    console.log("Uploading LKPS with periode:", periode);
+    for (let [key, value] of (formData as any).entries()) {
+      console.log(`${key}:`, value instanceof File ? value.name : value);
+    }
+
     try {
       await apiClient.post("/lkps/confirm", formData, {
         headers: { "Content-Type": "multipart/form-data" },
