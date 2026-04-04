@@ -18,7 +18,8 @@ import {
     FolderOpen,
     ClipboardList,
     FileSpreadsheet,
-    Shield
+    Shield,
+    Layout
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -35,7 +36,7 @@ export function Sidebar() {
     // Accordion state
     const [expanded, setExpanded] = useState<'umum' | 'prodi' | null>(null);
 
-    // Auto-expand accordions if a unique child is active
+    // Auto-expand accordions based on current path
     useEffect(() => {
         const umumPaths = ['/manajemen-akun'];
         const prodiPaths = ['/profil-prodi', '/penugasan'];
@@ -77,16 +78,16 @@ export function Sidebar() {
     const inactiveGlobalClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
 
     const parentToggleClass = "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300 mb-1";
-    const activeParentClass = "bg-blue-600 text-white shadow-md"; // Blue for parent when expanded
+    const activeParentClass = "bg-blue-600 text-white shadow-md";
     const inactiveParentClass = "text-gray-700 bg-gray-50 hover:bg-gray-100";
     
     const submenuBaseClass = "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ml-4 mb-1";
-    const activeSubmenuClass = "bg-blue-100/50 text-blue-700 border-l-4 border-blue-600 font-bold"; // Lighter BG for sub
+    const activeSubmenuClass = "bg-blue-100/50 text-blue-700 border-l-4 border-blue-600 font-bold";
     const inactiveSubmenuClass = "text-gray-500 hover:bg-gray-50 hover:text-gray-900";
 
     return (
         <div className="flex h-screen w-full flex-col border-r bg-white px-4 py-6 shadow-sm overflow-hidden">
-            {/* Header */}
+            {/* BRANDING */}
             <div className="mb-8 px-4 flex items-center gap-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
                 <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Portal STEI</h1>
@@ -94,31 +95,33 @@ export function Sidebar() {
             
             <nav className="flex flex-1 flex-col overflow-y-auto pr-2 custom-scrollbar">
                 
-                {/* 1. MUTUAL ITEMS (GLOBAL TOP) */}
-                <Link href="/dashboard" className={cn(globalItemClass, pathname === '/dashboard' ? activeGlobalClass : inactiveGlobalClass)}>
-                    <LayoutDashboard className="h-4 w-4" />
-                    Beranda
-                </Link>
-                <Link href="/dashboard/lkps" className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
-                    <FileSpreadsheet className="h-4 w-4" />
-                    LKPS
-                </Link>
-                <Link href="/led" className={cn(globalItemClass, pathname === '/led' ? activeGlobalClass : inactiveGlobalClass)}>
-                    <FileText className="h-4 w-4" />
-                    LED
-                </Link>
-                <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
-                    <Activity className="h-4 w-4" />
-                    Monitoring & Evaluasi
-                </Link>
-                <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
-                    <Download className="h-4 w-4" />
-                    Unduh Laporan/Dokumen
-                </Link>
+                {/* 1. SHARED ITEMS (MUTUAL) - TOP LEVEL */}
+                <div className="space-y-1">
+                    <Link href="/dashboard" className={cn(globalItemClass, pathname === '/dashboard' ? activeGlobalClass : inactiveGlobalClass)}>
+                        <LayoutDashboard className="h-4 w-4" />
+                        Beranda
+                    </Link>
+                    <Link href="/dashboard/lkps" className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
+                        <FileSpreadsheet className="h-4 w-4" />
+                        LKPS
+                    </Link>
+                    <Link href="/led" className={cn(globalItemClass, pathname === '/led' ? activeGlobalClass : inactiveGlobalClass)}>
+                        <FileText className="h-4 w-4" />
+                        LED
+                    </Link>
+                    <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
+                        <Activity className="h-4 w-4" />
+                        Monitoring & Evaluasi
+                    </Link>
+                    <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
+                        <Download className="h-4 w-4" />
+                        Unduh Laporan/Dokumen
+                    </Link>
+                </div>
 
                 <div className="my-4 border-t border-gray-100" />
 
-                {/* 2. MENU UMUM ACCORDION (UNIQUE) */}
+                {/* 2. MENU UMUM (UNIQUE TO ADMIN/PIMPINAN) */}
                 {isSuperOrPimpinan && (
                     <div className="mb-2">
                         <button
@@ -144,14 +147,14 @@ export function Sidebar() {
                     </div>
                 )}
 
-                {/* 3. MENU PRODI ACCORDION (UNIQUE) */}
+                {/* 3. MENU PRODI (UNIQUE TO PRODI OPERATIONS) */}
                 <div className="mb-2">
                     <button
                         onClick={() => toggleSection('prodi')}
                         className={cn(parentToggleClass, expanded === 'prodi' ? activeParentClass : inactiveParentClass)}
                     >
                         <div className="flex items-center gap-3">
-                            <Database className="h-4 w-4" />
+                            <Layout className="h-4 w-4" />
                             <span>Menu Prodi</span>
                         </div>
                         <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'prodi' && "rotate-180")} />
@@ -176,6 +179,7 @@ export function Sidebar() {
                     </div>
                 </div>
 
+                {/* 4. SHARED BOTTOM ITEMS */}
                 <div className="mt-auto pt-4 space-y-1">
                     <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
                         <Settings className="h-4 w-4" />
