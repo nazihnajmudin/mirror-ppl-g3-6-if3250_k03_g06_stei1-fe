@@ -141,7 +141,7 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
     }
   };
 
-  const isViewOnly = user?.role === 'PIMPINAN';
+  const isViewOnly = user?.role === 'PIMPINAN' || user?.role === 'SUPER_ADMIN';
   const prodiName = allVersions[0]?.prodi?.fullname || "Program Studi";
 
   return (

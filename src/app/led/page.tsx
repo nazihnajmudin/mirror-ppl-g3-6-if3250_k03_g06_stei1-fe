@@ -535,29 +535,56 @@ function LEDPageContent() {
     const { user, loading } = useUser();
     const searchParams = useSearchParams();
     const urlProdiId = searchParams.get("prodiId");
+    const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
+    const [isProdiLoading, setIsProdiLoading] = useState(true);
 
-    if (loading) return <div className="p-8 text-gray-500">Memuat otorisasi...</div>;
+    useEffect(() => {
+        const fetchMyProdis = async () => {
+            if (!user) return;
+            try {
+                const res = await apiClient.get('/prodi/my-prodi');
+                setAccessibleProdis(res.data.data || []);
+            } catch (err) {
+                console.error("Failed to fetch my prodis");
+            } finally {
+                setIsProdiLoading(false);
+            }
+        };
+        fetchMyProdis();
+    }, [user]);
+
+    if (loading || isProdiLoading) return <div className="p-8 text-gray-500">Memuat otorisasi...</div>;
     if (!user) return null;
 
     const isGuestRole = user.role === 'PIMPINAN' || user.role === 'SUPER_ADMIN';
     const canUpload = user.role === 'KAPRODI' || user.role === 'TIM_PRODI';
 
-    // Skenario 1: Pimpinan/Admin melihat halaman awal (/led) -> Tampilkan Tabel Prodi
-    if (isGuestRole && !urlProdiId) {
+    // Jika ada prodiId di URL, tampilkan detail (dengan izin yang sesuai)
+    if (urlProdiId) {
+        // Cek apakah user berhak akses prodi ini
+        const hasAccess = accessibleProdis.some(p => p.id === urlProdiId);
+        if (!hasAccess && !isGuestRole) {
+            return <div className="p-8 text-red-500 font-bold">Akses ditolak. Anda tidak ditugaskan di program studi ini.</div>;
+        }
+        
+        // Admin/Pimpinan selalu read-only
+        const viewOnly = isGuestRole;
+        return <DocumentView targetProdiId={urlProdiId} canUpload={!viewOnly} isGuest={isGuestRole} />;
+    }
+
+    // Jika tidak ada prodiId di URL:
+    // 1. Jika user punya lebih dari 1 prodi akses (atau Admin/Pimpinan), tampilkan LIST
+    if (isGuestRole || accessibleProdis.length > 1) {
         return <ProdiListView />;
     }
 
-    // Skenario 2: Pimpinan/Admin sudah memilih prodi (/led?prodiId=xyz) -> Tampilkan LED Read-Only
-    if (isGuestRole && urlProdiId) {
-        return <DocumentView targetProdiId={urlProdiId} canUpload={false} isGuest={true} />;
+    // 2. Jika user cuma punya 1 prodi akses, langsung arahkan ke detail prodi itu
+    if (accessibleProdis.length === 1) {
+        const myProdiId = accessibleProdis[0].id;
+        return <DocumentView targetProdiId={myProdiId} canUpload={true} isGuest={false} />;
     }
 
-    // Skenario 3: Kaprodi/Tim Prodi (/led) -> Tampilkan LED Upload Mode
-    if (canUpload && user.prodiId) {
-        return <DocumentView targetProdiId={user.prodiId} canUpload={true} isGuest={false} />;
-    }
-
-    return <div className="p-8 text-red-500 font-bold">Akses ditolak atau Program Studi tidak ditemukan.</div>;
+    return <div className="p-8 text-red-500 font-bold">Program Studi tidak ditemukan atau Anda tidak memiliki akses.</div>;
 }
 
 export default function LEDPage() {
