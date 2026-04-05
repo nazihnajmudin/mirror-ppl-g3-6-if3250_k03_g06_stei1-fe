@@ -173,6 +173,8 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
   })
   const [timProdi, setTimProdi] = React.useState<TimProdiMember[]>([])
   const [isEditing, setIsEditing] = React.useState(false)
+  const [isLoadingData, setIsLoadingData] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
   const [editForm, setEditForm] = React.useState<ProdiData>(prodiData)
   const [misiText, setMisiText] = React.useState("")
   const [showSertifikat, setShowSertifikat] = React.useState(false)
@@ -188,8 +190,10 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
 
   React.useEffect(() => {
     if (targetProdiId) {
-        loadProdiData(targetProdiId)
-        loadTimProdi(targetProdiId)
+        setError(null)
+        setIsLoadingData(true)
+        Promise.all([loadProdiData(targetProdiId), loadTimProdi(targetProdiId)])
+            .finally(() => setIsLoadingData(false))
     }
   }, [targetProdiId])
 
@@ -206,7 +210,9 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
         endDate: accreditation?.endDate ? new Date(accreditation.endDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "",
         certificateUrl: accreditation?.certificateUrl ?? "",
       }))
-    } catch {
+    } catch (err: any) {
+        console.error("Gagal memuat data prodi:", err)
+        setError("Gagal memuat data program studi. Pastikan Anda memiliki akses.")
     }
   }
 
@@ -224,7 +230,8 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
           initials: makeInitials(m.name),
         }))
       )
-    } catch {
+    } catch (err: any) {
+        console.error("Gagal memuat tim prodi:", err)
     }
   }
 
@@ -345,6 +352,30 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
   }
 
   const isGuest = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
+
+  if (isLoadingData) {
+    return (
+        <div className="flex flex-col gap-6">
+            <HeaderKaprodi />
+            <Card className="rounded-xl border border-gray-200 bg-white shadow-sm mb-6">
+                <CardContent className="px-6 py-24 flex flex-col items-center justify-center gap-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <p className="text-gray-500 font-medium text-sm">Memuat data program studi...</p>
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
+
+  if (error) {
+    return (
+        <div className="flex flex-col items-center justify-center p-12 gap-4">
+            <p className="text-red-500 font-bold">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">Coba Lagi</Button>
+            <Button onClick={() => router.push('/profil-prodi')} variant="ghost">Kembali ke Daftar</Button>
+        </div>
+    )
+  }
 
   return (
     <div className="relative">
@@ -578,15 +609,6 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
                 <CardTitle className="text-lg font-bold text-gray-900">Tim Prodi</CardTitle>
                 <p className="text-sm text-gray-500 mt-0.5">{timProdi.length} Anggota</p>
               </div>
-              {canEdit && (
-                <Button
-                    onClick={openTambahAnggota}
-                    className="bg-black hover:bg-gray-800 text-white rounded-full px-5 py-2 text-sm flex items-center gap-2 transition-all active:scale-95 shadow-md"
-                >
-                    <Plus className="w-4 h-4" />
-                    Tambah Anggota
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -796,7 +818,11 @@ function ProfilProdiContent() {
 
     React.useEffect(() => {
         const fetchMyProdis = async () => {
-            if (!user) return;
+            if (loading) return;
+            if (!user) {
+                setIsProdiLoading(false);
+                return;
+            }
             try {
                 const res = await apiClient.get('/prodi/my-prodi');
                 setAccessibleProdis(res.data.data || []);
@@ -807,9 +833,17 @@ function ProfilProdiContent() {
             }
         };
         fetchMyProdis();
-    }, [user]);
+    }, [user, loading]);
 
-    if (loading || isProdiLoading) return <div className="p-8 text-gray-500">Memuat otorisasi...</div>;
+    if (loading || isProdiLoading) {
+        return (
+            <div className="p-8 flex items-center gap-3 text-gray-500 font-medium">
+                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                Memuat otorisasi...
+            </div>
+        );
+    }
+    
     if (!user) return null;
 
     const isGuestRole = user.role === 'PIMPINAN' || user.role === 'SUPER_ADMIN';
