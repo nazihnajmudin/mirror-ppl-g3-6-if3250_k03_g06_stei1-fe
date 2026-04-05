@@ -51,6 +51,7 @@ export interface ProdiAssignment {
   id: string;
   userId: string;
   prodiId: string;
+  kriteria?: string[];
   createdAt: string;
   user: {
     id: string;
@@ -68,6 +69,7 @@ export interface ProdiAssignment {
 export interface CreatePenugasanInput {
   userId: string;
   prodiId: string;
+  kriteria?: string[];
 }
 
 export interface CurrentUser {

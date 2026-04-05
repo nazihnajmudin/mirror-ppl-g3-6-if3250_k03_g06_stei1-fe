@@ -136,7 +136,7 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
   const { user } = useUser()
   const [prodiName, setProdiName] = React.useState("Program Studi")
   const [anggotaList, setAnggotaList] = React.useState<User[]>([])
-  const [penugasanList, setPenugasanList] = React.useState<ProdiAssignment[]>([])
+  const [penugasanList, setPenugasanList] = React.useState<any[]>([])
   const [selectedUserId, setSelectedUserId] = React.useState("")
   const [selectedKriteria, setSelectedKriteria] = React.useState<string[]>([])
   const [filterAnggota, setFilterAnggota] = React.useState("Semua Anggota")
@@ -200,7 +200,11 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
     }
 
     try {
-      const result = await addPenugasan({ userId: selectedUserId, prodiId: targetProdiId })
+      const result = await addPenugasan({ 
+          userId: selectedUserId, 
+          prodiId: targetProdiId,
+          kriteria: selectedKriteria
+      })
       setPenugasanList((prev) => [result, ...prev])
       setSelectedKriteria([])
       setSelectedUserId("")
@@ -231,6 +235,13 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
 
   const assignedUserIds = new Set(penugasanList.map((p) => p.userId))
   const unassignedCount = anggotaList.filter((a) => !assignedUserIds.has(a.id)).length
+  
+  const assignedKriteriaSet = new Set<string>()
+  penugasanList.forEach((p) => {
+      const k = p.kriteria || p.indikator || []
+      k.forEach((item: string) => assignedKriteriaSet.add(item))
+  })
+  const totalAssignedKriteria = assignedKriteriaSet.size
 
   const filteredPenugasan =
     filterAnggota === "Semua Anggota"
@@ -278,8 +289,8 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
 
         <Card className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <CardContent className="px-5 py-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Kriteria Dipilih</p>
-            <p className="text-3xl font-bold text-gray-900">{selectedKriteria.length}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Kriteria Ditugaskan</p>
+            <p className="text-3xl font-bold text-gray-900">{totalAssignedKriteria}</p>
             <p className="text-xs text-gray-500 mt-1">dari {kriteria.length} Kriteria</p>
           </CardContent>
         </Card>
@@ -438,28 +449,52 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
           ) : (
             <div className="grid grid-cols-3 gap-4">
               {anggotaList.map((a) => {
-                const assigned = penugasanList.some((p) => p.userId === a.id)
+                const assignment = penugasanList.find((p) => p.userId === a.id)
+                const assigned = !!assignment
+                const assignedKriteria = assignment?.kriteria || assignment?.indikator || []
+
                 return (
-                  <div key={a.id} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <Avatar className="w-8 h-8 border border-gray-200">
-                        <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
-                          {makeInitials(a.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <span className="text-sm font-bold text-gray-900 block">{a.name}</span>
-                        <span className="text-[11px] text-gray-400">{a.role}</span>
-                      </div>
+                  <div key={a.id} className="rounded-xl border border-gray-100 bg-gray-50/60 p-4 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center gap-2.5 mb-3">
+                        <Avatar className="w-8 h-8 border border-gray-200">
+                            <AvatarFallback className="bg-blue-50 text-blue-600 text-[11px] font-bold">
+                            {makeInitials(a.name)}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <span className="text-sm font-bold text-gray-900 block">{a.name}</span>
+                            <span className="text-[11px] text-gray-400">{a.role}</span>
+                        </div>
+                        </div>
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold shadow-none border-none ${
-                        assigned ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-                      }`}
-                    >
-                      {assigned ? "Sudah Ditugaskan" : "Belum Ditugaskan"}
-                    </Badge>
+                    
+                    <div className="flex flex-col items-start mt-2">
+                        <Badge
+                            variant="secondary"
+                            className={`rounded-md px-2.5 py-0.5 text-[11px] font-bold shadow-none border-none mb-1.5 ${
+                                assigned ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                            }`}
+                        >
+                        {assigned ? "Sudah Ditugaskan" : "Belum Ditugaskan"}
+                        </Badge>
+
+                        {assigned && (
+                            <div className="mt-1 w-full">
+                                {assignedKriteria.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                        {assignedKriteria.map((k: string) => (
+                                            <span key={k} className="text-[10px] bg-white border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-medium shadow-sm">
+                                                {k}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span className="text-[10px] text-gray-400 italic">Semua Kriteria / Umum</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                   </div>
                 )
               })}
