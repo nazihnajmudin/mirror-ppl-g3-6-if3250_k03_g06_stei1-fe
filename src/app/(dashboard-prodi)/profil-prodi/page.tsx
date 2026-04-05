@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, ExternalLink, Check, X, BookOpen, Eye, Loader2 } from "lucide-react"
+import { Plus, Pencil, ExternalLink, Check, X, BookOpen, Eye, Loader2, ArrowRight } from "lucide-react"
 import { HeaderKaprodi } from "@/components/layout/header-kaprodi"
 import { useSearchParams, useRouter } from "next/navigation"
+import Link from "next/link"
 
 import {
   Avatar,
@@ -42,8 +43,8 @@ import {
   updateProdi,
   upsertAccreditation,
   addProdiMember,
-  deleteProdiMember,
   getProdiMembers,
+  getPenugasan,
 } from "@/lib/api-prodi"
 import apiClient from "@/lib/api-client"
 import { useUser } from "@/hooks/useUser"
@@ -172,6 +173,7 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
     certificateUrl: "",
   })
   const [timProdi, setTimProdi] = React.useState<TimProdiMember[]>([])
+  const [penugasanList, setPenugasanList] = React.useState<any[]>([])
   const [isEditing, setIsEditing] = React.useState(false)
   const [isLoadingData, setIsLoadingData] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -179,8 +181,6 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
   const [misiText, setMisiText] = React.useState("")
   const [showSertifikat, setShowSertifikat] = React.useState(false)
   const [showTambahAnggota, setShowTambahAnggota] = React.useState(false)
-  const [showHapusDialog, setShowHapusDialog] = React.useState(false)
-  const [memberToDelete, setMemberToDelete] = React.useState<string | null>(null)
   const [toast, setToast] = React.useState<{ message: string; type: "success" | "error" } | null>(null)
   const [newNama, setNewNama] = React.useState("")
   const [newEmail, setNewEmail] = React.useState("")
@@ -192,7 +192,11 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
     if (targetProdiId) {
         setError(null)
         setIsLoadingData(true)
-        Promise.all([loadProdiData(targetProdiId), loadTimProdi(targetProdiId)])
+        Promise.all([
+          loadProdiData(targetProdiId), 
+          loadTimProdi(targetProdiId),
+          loadPenugasan(targetProdiId)
+        ])
             .finally(() => setIsLoadingData(false))
     }
   }, [targetProdiId])
@@ -232,6 +236,15 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
       )
     } catch (err: any) {
         console.error("Gagal memuat tim prodi:", err)
+    }
+  }
+
+  const loadPenugasan = async (id: string) => {
+    try {
+        const assignments = await getPenugasan(id)
+        setPenugasanList(assignments || [])
+    } catch (err) {
+        console.error("Gagal memuat data penugasan:", err)
     }
   }
 
@@ -328,26 +341,6 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
         setFormErrors({ general: error.response?.data?.message || error.message })
       }
       showNotification("Gagal menambahkan anggota", "error")
-    }
-  }
-
-  const confirmHapusAnggota = (id: string) => {
-    setMemberToDelete(id)
-    setShowHapusDialog(true)
-  }
-
-  const executeHapusAnggota = async () => {
-    if (!memberToDelete) return
-
-    try {
-      await deleteProdiMember(memberToDelete)
-      setTimProdi((prev) => prev.filter((m) => m.id !== memberToDelete))
-      showNotification("Anggota berhasil dihapus", "success")
-    } catch (error: any) {
-      showNotification(error?.response?.data?.message || "Gagal menghapus anggota", "error")
-    } finally {
-      setShowHapusDialog(false)
-      setMemberToDelete(null)
     }
   }
 
@@ -618,7 +611,7 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">EMAIL</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">ROLE</TableHead>
                     <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">STATUS</TableHead>
-                    {canEdit && <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider text-right">AKSI</TableHead>}
+                    <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">PENUGASAN</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -629,7 +622,9 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
                       </TableCell>
                     </TableRow>
                   )}
-                  {timProdi.map((member) => (
+                  {timProdi.map((member) => {
+                    const isAssigned = penugasanList.some((p) => p.userId === member.id);
+                    return (
                     <TableRow key={member.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
                       <TableCell className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -655,20 +650,20 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
                           {member.isActive ? "Aktif" : "Tidak Aktif"}
                         </Badge>
                       </TableCell>
-                      {canEdit && (
-                        <TableCell className="px-6 py-4 text-right">
-                            <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => confirmHapusAnggota(member.id)}
-                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                            >
-                            <Trash2 className="w-4 h-4" />
-                            </Button>
-                        </TableCell>
-                      )}
+                      <TableCell className="px-6 py-4">
+                        <Link href="/penugasan" className="inline-block group">
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold transition-all border ${
+                                isAssigned 
+                                ? "bg-blue-50 text-blue-600 border-blue-200 group-hover:bg-blue-100" 
+                                : "bg-gray-50 text-gray-500 border-gray-200 group-hover:bg-gray-100 group-hover:text-gray-700"
+                            }`}>
+                                {isAssigned ? "Lihat Penugasan" : "Atur Penugasan"}
+                                <ArrowRight className="w-3 h-3" />
+                            </div>
+                        </Link>
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             </CardContent>
@@ -780,28 +775,6 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog Konfirmasi Hapus */}
-      <Dialog open={showHapusDialog} onOpenChange={setShowHapusDialog}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-gray-900">Konfirmasi Hapus</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-600">
-              Apakah Anda yakin ingin menghapus anggota ini dari Tim Prodi? Tindakan ini tidak dapat dibatalkan.
-            </p>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowHapusDialog(false)} className="rounded-lg border-gray-200 text-sm font-semibold">
-              Batal
-            </Button>
-            <Button onClick={executeHapusAnggota} className="bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">
-              Ya, Hapus
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
@@ -847,9 +820,8 @@ function ProfilProdiContent() {
     if (!user) return null;
 
     const isGuestRole = user.role === 'PIMPINAN' || user.role === 'SUPER_ADMIN';
-    const canEdit = user.role === 'KAPRODI'; // Biasanya Kaprodi yang edit profil prodi
+    const canEdit = user.role === 'KAPRODI';
 
-    // Skenario 1: Ada prodiId di URL
     if (urlProdiId) {
         const hasAccess = accessibleProdis.some(p => p.id === urlProdiId);
         if (!hasAccess && !isGuestRole) {
@@ -858,12 +830,10 @@ function ProfilProdiContent() {
         return <ProdiDetailView targetProdiId={urlProdiId} canEdit={canEdit && !isGuestRole} />;
     }
 
-    // Skenario 2: Tidak ada prodiId, tapi punya lebih dari 1 prodi atau Admin
     if (isGuestRole || accessibleProdis.length > 1) {
         return <ProdiListView />;
     }
 
-    // Skenario 3: Cuma punya 1 prodi akses
     if (accessibleProdis.length === 1) {
         return <ProdiDetailView targetProdiId={accessibleProdis[0].id} canEdit={canEdit} />;
     }
