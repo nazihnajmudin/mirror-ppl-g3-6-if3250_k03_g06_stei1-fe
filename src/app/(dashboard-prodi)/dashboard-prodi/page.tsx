@@ -104,15 +104,8 @@ export default function DashboardProdiPage() {
   const canEdit = dashboard.accessInfo?.canEdit
   const isReadOnly = dashboard.accessInfo?.isReadOnly
 
-  // Mock sub-items for criterion detail view (mimics gambar 2)
-  const getCriterionSubItems = (criterion: any) => {
-    // In real app, fetch from API. Here we mock based on criterion code/name.
-    return [
-      { id: "sub1", name: "Visi Program Studi", progress: 100 },
-      { id: "sub2", name: "Misi Program Studi", progress: 100 },
-      { id: "sub3", name: "Tujuan Program Studi", progress: 100 },
-      { id: "sub4", name: "Strategi Program Studi", progress: 100 },
-    ]
+  const getCriterionSubItems = (_criterion: any): Array<{ id: string; name: string; progress: number }> => {
+    return []
   }
 
   // ─── CRITERION DETAIL VIEW (Gambar 2) ───────────────────────────────────────
@@ -270,10 +263,12 @@ export default function DashboardProdiPage() {
           )}
           <Bell className="w-5 h-5 text-gray-500" />
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">M</div>
+            <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+              {currentUser?.name?.charAt(0)?.toUpperCase() ?? "?"}
+            </div>
             <div className="text-right">
-              <p className="text-xs font-semibold text-gray-800">Michael</p>
-              <p className="text-xs text-gray-400">Pimpinan</p>
+              <p className="text-xs font-semibold text-gray-800">{currentUser?.name ?? "—"}</p>
+              <p className="text-xs text-gray-400">{currentUser?.role ?? "—"}</p>
             </div>
           </div>
         </div>
