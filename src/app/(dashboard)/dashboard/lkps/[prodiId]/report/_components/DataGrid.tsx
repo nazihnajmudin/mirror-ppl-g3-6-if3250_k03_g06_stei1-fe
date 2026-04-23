@@ -82,7 +82,7 @@ const DataGrid: React.FC<DataGridProps> = ({ sheetName }) => {
         </div>
       </div>
       
-      <div className="relative border-2 border-blue-200 rounded-xl bg-white shadow-lg overflow-visible" style={{ minHeight: '650px', height: '650px' }}>
+      <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden flex-1" style={{ minHeight: '400px' }}>
         <HotTable
           ref={hotRef}
           data={currentData}
@@ -100,7 +100,6 @@ const DataGrid: React.FC<DataGridProps> = ({ sheetName }) => {
           manualRowResize={true}
           autoWrapRow={true}
           autoWrapCol={true}
-          renderAllRows={true}
           selectionMode="multiple"
         />
       </div>

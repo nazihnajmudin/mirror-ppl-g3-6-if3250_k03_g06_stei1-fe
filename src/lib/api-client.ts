@@ -5,8 +5,9 @@ const LEGACY_TOKEN_STORAGE_KEY = "accessToken";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
-  timeout: 10000,
+  timeout: 120000, // Increased to 2 minutes for heavy Excel processing
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
 // Request interceptor: sisipkan JWT token ke setiap request
