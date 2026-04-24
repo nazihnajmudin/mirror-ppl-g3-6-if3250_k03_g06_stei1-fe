@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/lib/api-client";
+import { LAMInfokomFormContent } from "./page-LamInfokom";
 
 const LED_CRITERIA = [
   { id: "c1", code: "C.1", name: "Diferensiasi Misi",      fullName: "Visi, Misi, Tujuan, dan Strategi" },
@@ -495,7 +496,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null
       <button onClick={() => editor.chain().focus().toggleItalic().run()} className={btn(editor.isActive("italic"))} title="Italic"><Italic className="w-4 h-4" /></button>
       <div className="w-px h-5 bg-gray-300 mx-1" />
       <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={btn(editor.isActive("bulletList"))} title="Bullet List"><List className="w-4 h-4" /></button>
-      <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive("orderedList"))} title="Numbered List"><List Ordered className="w-4 h-4" /></button>
+      <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive("orderedList"))} title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
       <div className="w-px h-5 bg-gray-300 mx-1" />
       <button onClick={() => editor.chain().focus().setTextAlign("left").run()} className={btn(editor.isActive({ textAlign: "left" }))} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
       <button onClick={() => editor.chain().focus().setTextAlign("center").run()} className={btn(editor.isActive({ textAlign: "center" }))} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
@@ -828,10 +829,120 @@ function LEDFormContent() {
   );
 }
 
+function TemplateSelectorContent() {
+  const router = useRouter();
+  const { user, loading } = useUser();
+  const searchParams = useSearchParams();
+  const prodiIdParam = searchParams.get("prodiId");
+  const template = searchParams.get("template");
+
+  if (template === "lam-teknik") {
+    return <LEDFormContent />;
+  }
+  if (template === "lam-infokom") {
+    return <LAMInfokomFormContent />;
+  }
+
+  if (loading) return <div className="p-8 text-gray-500">Memuat...</div>;
+  if (!user) return null;
+
+  const canEdit = user.role === "KAPRODI" || user.role === "TIM_PRODI";
+  if (!canEdit) {
+    const params = new URLSearchParams();
+    if (prodiIdParam) params.set("prodiId", prodiIdParam);
+    params.set("template", "lam-teknik");
+    router.replace(`/led/form?${params.toString()}`);
+    return null;
+  }
+
+  const makeUrl = (t: string) => {
+    const params = new URLSearchParams();
+    if (prodiIdParam) params.set("prodiId", prodiIdParam);
+    params.set("template", t);
+    return `/led/form?${params.toString()}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl">
+        {/* Back button */}
+        <button
+          onClick={() => router.push("/led" + (prodiIdParam ? `?prodiId=${prodiIdParam}` : ""))}
+          className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm gap-2 mb-8"
+        >
+          <ArrowLeft className="w-4 h-4" /> Kembali ke LED
+        </button>
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 shadow-lg mb-4">
+            <FileText className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Pilih Template LED</h1>
+          <p className="text-gray-500 mt-2 text-sm">
+            Pilih lembaga akreditasi yang sesuai untuk mengisi Laporan Evaluasi Diri.
+          </p>
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* LAM Teknik */}
+          <button
+            onClick={() => router.push(makeUrl("lam-teknik"))}
+            className="group text-left bg-white rounded-2xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-xl shadow-sm p-6 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+              <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                LAM Teknik
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-gray-900 mb-1">LAM Teknik</h2>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Template berdasarkan instrumen akreditasi LAM Teknik. Mencakup 7 kriteria: Diferensiasi Misi, Akuntabilitas, Relevansi, SDM, Sarana &amp; Prasarana, Mahasiswa &amp; Luaran, dan Penjaminan Mutu.
+            </p>
+            <div className="mt-4 text-xs font-semibold text-blue-600 group-hover:underline">
+              Pilih Template →
+            </div>
+          </button>
+
+          {/* LAM INFOKOM */}
+          <button
+            onClick={() => router.push(makeUrl("lam-infokom"))}
+            className="group text-left bg-white rounded-2xl border-2 border-gray-200 hover:border-emerald-500 hover:shadow-xl shadow-sm p-6 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                <FileText className="w-6 h-6 text-emerald-600" />
+              </div>
+              <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                LAM INFOKOM
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-gray-900 mb-1">LAM INFOKOM</h2>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Template berdasarkan Panduan LED LAM INFOKOM 2.1 — November 2025. Mencakup 6 kriteria PPEPP: Budaya Mutu, Relevansi Pendidikan, Relevansi Penelitian, Relevansi PkM, Akuntabilitas, dan Diferensiasi Misi.
+            </p>
+            <div className="mt-4 text-xs font-semibold text-emerald-600 group-hover:underline">
+              Pilih Template →
+            </div>
+          </button>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-8">
+          Anda dapat kembali ke halaman ini kapan saja untuk beralih template.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function LEDFormPage() {
   return (
     <Suspense fallback={<div className="p-8">Memuat formulir...</div>}>
-      <LEDFormContent />
+      <TemplateSelectorContent />
     </Suspense>
   );
 }
