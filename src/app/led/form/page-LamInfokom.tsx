@@ -9,7 +9,7 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TextAlign from "@tiptap/extension-text-align";
-import {AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, CheckCircle2, ChevronDown, ChevronRight, Clock, FileText, Heading1, Heading2, Italic, List, ListOrdered, Save, Table as TableIcon,} from "lucide-react";
+import {AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, FileText, Heading1, Heading2, History, Italic, List, ListOrdered, Save, Table as TableIcon,} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -708,6 +708,13 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null
   );
 }
 
+interface FormVersion {
+  id: string;
+  createdAt: Date;
+  periode: string;
+  createdByName?: string;
+}
+
 function LAMInfokomFormContent() {
   const { user, loading } = useUser();
   const router = useRouter();
@@ -728,6 +735,11 @@ function LAMInfokomFormContent() {
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [versions, setVersions] = useState<FormVersion[]>([]);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [activePeriode] = useState<string>(new Date().getFullYear().toString());
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSaveRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
@@ -814,6 +826,13 @@ function LAMInfokomFormContent() {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 400));
+      const newVersion: FormVersion = {
+        id: Date.now().toString(),
+        createdAt: new Date(),
+        periode: activePeriode,
+      };
+      setVersions((prev) => [newVersion, ...prev]);
+      setActiveVersionId(newVersion.id);
       setLastSavedAt(new Date());
       setSaveStatus("saved");
     } catch {
@@ -824,7 +843,7 @@ function LAMInfokomFormContent() {
         description: "Terjadi kesalahan. Coba lagi.",
       });
     }
-  }, [editor, prodiId, activeKey, toast]);
+  }, [editor, prodiId, activeKey, activePeriode, content, toast]);
 
   useEffect(() => {
     handleSaveRef.current = handleSave;
@@ -838,6 +857,34 @@ function LAMInfokomFormContent() {
     },
     []
   );
+
+  const handleExport = useCallback(async () => {
+    if (!prodiId) return;
+    setIsExporting(true);
+    toast({ title: "Menyiapkan Unduhan", description: "Dokumen Word sedang digenerate..." });
+    try {
+      const response = await apiClient.get(`/led/export/form/${prodiId}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const contentDisposition = response.headers["content-disposition"];
+      let filename = `LED_${prodiName || prodiId}.docx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/);
+        if (match?.[1]) filename = decodeURIComponent(match[1]);
+      }
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Unduhan Berhasil", description: "File LED berhasil diunduh." });
+    } catch {
+      toast({ variant: "destructive", title: "Unduhan Gagal", description: "Endpoint export belum tersedia. Hubungi tim backend." });
+    } finally {
+      setIsExporting(false);
+    }
+  }, [prodiId, prodiName, toast]);
 
   const getCriteriaProgress = (criteriaId: string) => {
     const sections = ALL_SECTIONS.filter(
@@ -921,19 +968,70 @@ function LAMInfokomFormContent() {
             <div className="flex items-center gap-1.5 text-green-600 text-xs font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Tersimpan{" "}
-              {lastSavedAt.toLocaleTimeString("id-ID", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {lastSavedAt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
-
           {saveStatus === "idle" && lastSavedAt && (
             <div className="flex items-center gap-1.5 text-gray-400 text-xs">
               <Clock className="w-3.5 h-3.5" /> Ada perubahan belum tersimpan
             </div>
           )}
 
+          {/* Riwayat Versi */}
+          <div className="relative">
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 border border-gray-200"
+            >
+              <History className="w-3.5 h-3.5" />
+              Riwayat {versions.length > 0 && <span className="bg-gray-200 text-gray-700 rounded-full px-1.5 py-0.5 text-[10px] font-bold">{versions.length}</span>}
+            </button>
+            {showHistory && (
+              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Riwayat Versi · {activePeriode}</p>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {versions.length === 0 ? (
+                    <div className="p-5 text-sm text-gray-400 text-center">Belum ada versi tersimpan.<br />Klik Simpan untuk membuat versi pertama.</div>
+                  ) : (
+                    versions.map((v, idx) => (
+                      <div
+                        key={v.id}
+                        onClick={() => { setActiveVersionId(v.id); setShowHistory(false); }}
+                        className={cn(
+                          "px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 flex items-start gap-3",
+                          activeVersionId === v.id && "bg-blue-50"
+                        )}
+                      >
+                        <div className="mt-0.5">
+                          {idx === 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Clock className="w-3.5 h-3.5 text-gray-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-800">
+                            Versi {versions.length - idx} {idx === 0 && <span className="text-green-600">(Terbaru)</span>}
+                          </p>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            {v.createdAt.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || !prodiId}
+            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 border-gray-200 rounded-md hover:bg-gray-50 gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {isExporting ? "Mengunduh..." : "Unduh Word"}
+          </Button>
           {canEdit && (
             <Button
               onClick={handleSave}
