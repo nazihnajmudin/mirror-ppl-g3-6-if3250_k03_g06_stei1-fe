@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X } from "lucide-react";
+import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
 import { useUser } from "@/hooks/useUser";
@@ -352,9 +352,21 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
         <div className="space-y-6 relative">
         
         {/* 1. HEADER */}
-        <header className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
-            <p className="text-sm text-gray-500 mt-1">Manajemen arsip Laporan Evaluasi Diri (LED)</p>
+        <header className="mb-6 flex items-start justify-between">
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
+                <p className="text-sm text-gray-500 mt-1">Manajemen arsip Laporan Evaluasi Diri (LED)</p>
+            </div>
+            {canUpload && (
+                <Button
+                    variant="outline"
+                    onClick={() => router.push(`/led/form?prodiId=${targetProdiId}`)}
+                    className="gap-2 text-sm font-semibold shrink-0"
+                >
+                    <PenLine className="w-4 h-4" />
+                    Isi Formulir LED
+                </Button>
+            )}
         </header>
 
         {/* 2. SELECTION PERIODE & NAVIGASI */}
