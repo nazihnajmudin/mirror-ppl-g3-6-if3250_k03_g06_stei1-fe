@@ -46,6 +46,7 @@ export function SidebarProdi() {
         { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
         { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users, roleRequired: ['SUPER_ADMIN', 'PIMPINAN'] },
         { name: 'Pengaturan', href: '#', icon: Settings },
+        { name: 'Template Dokumen', href: '/template-dokumen', icon: FileText },
     ];
 
     const handleLogout = async () => {
