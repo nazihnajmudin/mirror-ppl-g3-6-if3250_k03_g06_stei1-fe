@@ -6,27 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadCloud, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Music, Video, MonitorPlay, Save, Edit, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import apiClient from "@/lib/api-client";
 import dynamic from 'next/dynamic';
-
 import 'react-quill-new/dist/quill.snow.css';
+
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
-const KRITERIA_LIST = [
-    { id: "K1", label: "Visi, Misi, Tujuan & Strategi" },
-    { id: "K2", label: "Tata Pamong & Kerjasama" },
-    { id: "K3", label: "Mahasiswa" },
-    { id: "K4", label: "Sumber Daya Manusia" },
-    { id: "K5", label: "Keuangan, Sarana & Prasarana" },
-    { id: "K6", label: "Pendidikan" },
-    { id: "K7", label: "Penelitian" },
-    { id: "K8", label: "Pengabdian Masyarakat" },
-    { id: "K9", label: "Luaran dan Capaian Tridharma" },
+const KRITERIA_LAM_TEKNIK = [
+    { id: "C1", label: "Visi, Misi, Tujuan, dan Strategi" },
+    { id: "C2", label: "Tata Pamong, Tata Kelola, dan Kerja Sama" },
+    { id: "C3", label: "Relevansi Pendidikan, Penelitian, dan PkM" },
+    { id: "C4", label: "Sumber Daya Manusia" },
+    { id: "C5", label: "Sarana, Prasarana, dan K3L" },
+    { id: "C6", label: "Mahasiswa dan Luaran Mahasiswa" },
+    { id: "C7", label: "Sistem Penjaminan Mutu" },
 ];
+
+const KRITERIA_LAM_INFOKOM = [
+    { id: "C1", label: "Budaya Mutu" },
+    { id: "C2", label: "Relevansi Pendidikan" },
+    { id: "C3", label: "Relevansi Penelitian" },
+    { id: "C4", label: "Relevansi Pengabdian kepada Masyarakat" },
+    { id: "C5", label: "Akuntabilitas" },
+    { id: "C6", label: "Diferensiasi Misi" },
+];
+
+const isInfokom = (abbreviation?: string) => ['IF', 'II'].includes(abbreviation?.toUpperCase() || '');
 
 const getFileIcon = (type: string) => {
     if (type.includes('image')) return <ImageIcon className="w-5 h-5 text-emerald-500" />;
@@ -61,24 +69,24 @@ export default function EvidenFormPage() {
     
     const mode = searchParams.get('mode') as 'add' | 'edit' | 'view' || 'view';
     const evidenId = searchParams.get('id');
+    const urlProdiId = searchParams.get('prodiId'); // Didapat dari navigasi sebelumnya
     const isViewOnly = mode === 'view' || user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
 
-    const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
+    const [activeProdi, setActiveProdi] = useState<any>(null);
     const [isProdiLoading, setIsProdiLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
     const [formData, setFormData] = useState({
-        prodiId: "",
+        prodiId: urlProdiId || "",
         judul: "",
         deskripsi: "",
         indikator: [] as string[],
-        startDate: "",
-        endDate: ""
+        periode: ""
     });
     
     const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
-    const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]); // Menyimpan ID file lama yang mau dihapus saat Edit
+    const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,23 +101,30 @@ export default function EvidenFormPage() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, []);
 
-    // FETCH PRODI
+    // FETCH PRODI & MENENTUKAN PRODI AKTIF
     useEffect(() => {
-        const fetchMyProdis = async () => {
+        const fetchProdi = async () => {
             if (!user) return;
             try {
                 const res = await apiClient.get('/prodi/my-prodi');
-                setAccessibleProdis(res.data.data || []);
+                const prodis = res.data.data || [];
+                const prodi = prodis.find((p: any) => p.id === urlProdiId) || prodis[0]; // Fallback ke prodi pertama jika url tidak ada
+                if (prodi) {
+                    setActiveProdi(prodi);
+                    if (mode === 'add') {
+                        setFormData(prev => ({ ...prev, prodiId: prodi.id }));
+                    }
+                }
             } catch (err) {
                 console.error("Failed to fetch my prodis", err);
             } finally {
                 setIsProdiLoading(false);
             }
         };
-        fetchMyProdis();
-    }, [user]);
+        fetchProdi();
+    }, [user, urlProdiId, mode]);
 
-    // FETCH DETAIL JIKA MODE EDIT ATAU VIEW
+    // FETCH DETAIL JIKA MODE EDIT/VIEW
     useEffect(() => {
         const fetchDetail = async () => {
             if (!evidenId) return;
@@ -123,14 +138,12 @@ export default function EvidenFormPage() {
                     judul: data.judul,
                     deskripsi: data.deskripsi || "",
                     indikator: data.indikator || [],
-                    startDate: data.startDate ? data.startDate.split('T')[0] : "",
-                    endDate: data.endDate ? data.endDate.split('T')[0] : ""
+                    periode: data.periode || ""
                 });
 
-                // Mapping file dari database ke format state UI
                 if (data.files && data.files.length > 0) {
                     setUploadedFiles(data.files.map((f: any) => ({
-                        id: f.id, // Menandai bahwa ini file lama dari DB
+                        id: f.id,
                         name: f.originalFilename,
                         type: f.mimeType,
                         size: formatBytes(f.size),
@@ -144,7 +157,6 @@ export default function EvidenFormPage() {
                 setIsFetchingDetail(false);
             }
         };
-
         if (mode !== 'add') fetchDetail();
     }, [evidenId, mode, router]);
 
@@ -157,36 +169,14 @@ export default function EvidenFormPage() {
         markAsUnsaved();
     };
 
-    const handleProdiChange = (prodiId: string | null) => {
-        if (!prodiId) {
-            handleFormChange('prodiId', "");
-            handleFormChange('startDate', "");
-            handleFormChange('endDate', "");
-            return;
-        }
-
-        handleFormChange('prodiId', prodiId);
-        
-        const selectedProdi = accessibleProdis.find(p => p.id === prodiId);
-        const accInfo = selectedProdi?.accreditation;
-
-        if (accInfo) {
-            handleFormChange('startDate', accInfo.startDate ? accInfo.startDate.split('T')[0] : "");
-            handleFormChange('endDate', accInfo.endDate ? accInfo.endDate.split('T')[0] : "");
-        } else {
-            handleFormChange('startDate', "");
-            handleFormChange('endDate', "");
-        }
-    };
-
     const handleFileSelect = (files: FileList | null) => {
         if (!files) return;
         const newFiles = Array.from(files).map(f => ({
             name: f.name,
             type: f.type || "unknown",
             size: formatBytes(f.size),
-            raw: f, // File mentah untuk dikirim via FormData
-            isExisting: false // Menandai ini file baru
+            raw: f,
+            isExisting: false
         }));
         setUploadedFiles(prev => [...prev, ...newFiles]);
         markAsUnsaved();
@@ -194,11 +184,9 @@ export default function EvidenFormPage() {
 
     const handleRemoveFile = (index: number) => {
         const fileToRemove = uploadedFiles[index];
-        // Jika file sudah ada di database, simpan ID-nya untuk dihapus di backend
         if (fileToRemove.isExisting && fileToRemove.id) {
             setDeletedFileIds(prev => [...prev, fileToRemove.id]);
         }
-        
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
         markAsUnsaved();
     };
@@ -220,8 +208,8 @@ export default function EvidenFormPage() {
     };
 
     const handleSave = async () => {
-        if (!formData.prodiId || !formData.judul) {
-            alert("Program Studi dan Judul wajib diisi.");
+        if (!formData.prodiId || !formData.judul || !formData.periode) {
+            alert("Program Studi, Periode, dan Judul wajib diisi.");
             return;
         }
 
@@ -232,16 +220,12 @@ export default function EvidenFormPage() {
             formDataObj.append('judul', formData.judul);
             formDataObj.append('deskripsi', formData.deskripsi);
             formDataObj.append('indikator', JSON.stringify(formData.indikator));
+            formDataObj.append('periode', formData.periode);
             
-            if (formData.startDate) formDataObj.append('startDate', formData.startDate);
-            if (formData.endDate) formDataObj.append('endDate', formData.endDate);
             if (deletedFileIds.length > 0) formDataObj.append('deletedFileIds', JSON.stringify(deletedFileIds));
 
-            // Append hanya file baru (yang tidak punya label isExisting)
             uploadedFiles.forEach(f => {
-                if (!f.isExisting && f.raw) {
-                    formDataObj.append('files', f.raw);
-                }
+                if (!f.isExisting && f.raw) formDataObj.append('files', f.raw);
             });
 
             if (mode === 'edit' && evidenId) {
@@ -252,7 +236,7 @@ export default function EvidenFormPage() {
 
             sessionStorage.removeItem('unsavedChanges');
             alert("Eviden berhasil disimpan!");
-            router.push('/eviden');
+            router.push(urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         } catch (error: any) {
             alert(error?.response?.data?.message || "Terjadi kesalahan saat menyimpan eviden.");
         } finally {
@@ -261,18 +245,22 @@ export default function EvidenFormPage() {
     };
 
     const handleCancel = () => {
+        const goBack = () => router.push(urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         if (sessionStorage.getItem('unsavedChanges') === 'true') {
             if (window.confirm("Perubahan belum disimpan. Yakin ingin membatalkan?")) {
                 sessionStorage.removeItem('unsavedChanges');
-                router.push('/eviden');
+                goBack();
             }
         } else {
-            router.push('/eviden');
+            goBack();
         }
     };
 
     if (userLoading || isProdiLoading || isFetchingDetail) return <div className="p-8 text-gray-500 font-medium flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin"/> Memuat form eviden...</div>;
     if (!user) return null;
+
+    // Menentukan Kriteria Berdasarkan Prodi Aktif
+    const kriteriaList = isInfokom(activeProdi?.abbreviation) ? KRITERIA_LAM_INFOKOM : KRITERIA_LAM_TEKNIK;
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -287,7 +275,7 @@ export default function EvidenFormPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     {isViewOnly && user.role !== 'SUPER_ADMIN' && user.role !== 'PIMPINAN' ? (
-                        <Button onClick={() => router.push(`/eviden/form?mode=edit&id=${evidenId}`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
+                        <Button onClick={() => router.push(`/eviden/form?mode=edit&id=${evidenId}${urlProdiId ? `&prodiId=${urlProdiId}` : ''}`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
                             <Edit className="w-4 h-4" /> Mulai Edit
                         </Button>
                     ) : !isViewOnly ? (
@@ -310,24 +298,14 @@ export default function EvidenFormPage() {
                 <div className="space-y-6 flex flex-col h-full">
                     <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-5">
                         
-                        <div>
-                            <Label className="text-gray-700 font-bold mb-1.5 block">Program Studi <span className="text-red-500">*</span></Label>
-                            <Select disabled={isViewOnly} value={formData.prodiId} onValueChange={handleProdiChange}>
-                                <SelectTrigger className="w-full h-10"><SelectValue placeholder="Pilih Program Studi" /></SelectTrigger>
-                                <SelectContent>
-                                    {accessibleProdis.map(p => <SelectItem key={p.id} value={p.id}>{p.fullname}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-[2fr_1fr] gap-4">
                             <div>
-                                <Label className="text-gray-700 font-bold mb-1.5 block">Tahun Mulai Akreditasi</Label>
-                                <Input type="date" disabled={isViewOnly} value={formData.startDate} onChange={(e) => handleFormChange('startDate', e.target.value)} />
+                                <Label className="text-gray-700 font-bold mb-1.5 block">Program Studi</Label>
+                                <Input disabled value={activeProdi?.fullname || "Memuat..."} className="bg-gray-50 text-gray-600 font-medium font-sans" />
                             </div>
                             <div>
-                                <Label className="text-gray-700 font-bold mb-1.5 block">Tahun Selesai Akreditasi</Label>
-                                <Input type="date" disabled={isViewOnly} value={formData.endDate} onChange={(e) => handleFormChange('endDate', e.target.value)} />
+                                <Label className="text-gray-700 font-bold mb-1.5 block">Periode <span className="text-red-500">*</span></Label>
+                                <Input disabled={isViewOnly} value={formData.periode} onChange={(e) => handleFormChange('periode', e.target.value)} placeholder="Contoh: 2024" type="number" />
                             </div>
                         </div>
 
@@ -351,7 +329,7 @@ export default function EvidenFormPage() {
                     <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex-1">
                         <h3 className="font-bold text-gray-900 mb-4 border-b pb-2">Pilih Kriteria/Indikator</h3>
                         <div className="space-y-3">
-                            {KRITERIA_LIST.map((kriteria) => (
+                            {kriteriaList.map((kriteria) => (
                                 <div key={kriteria.id} className="flex items-center space-x-3">
                                     <Checkbox 
                                         id={kriteria.id} 
@@ -383,7 +361,6 @@ export default function EvidenFormPage() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto pr-3 -mr-3 pb-4 space-y-3 custom-scrollbar relative">
-                        {/* 1. File List */}
                         {uploadedFiles.map((file, idx) => (
                             <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-all group">
                                 <div className="flex items-center gap-4 overflow-hidden">
@@ -408,7 +385,6 @@ export default function EvidenFormPage() {
                                         </Button>
                                     ) : (
                                         <div className="flex items-center gap-1">
-                                            {/* Tetap bisa download file yang sudah tersimpan di database saat mode edit */}
                                             {file.isExisting && file.id && (
                                                 <Button size="icon-sm" variant="ghost" onClick={() => handleDownloadFile(file.id, file.name)} className="w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50">
                                                     <Download className="w-4 h-4" />
@@ -423,7 +399,6 @@ export default function EvidenFormPage() {
                             </div>
                         ))}
 
-                        {/* 2. Dropzone Inline & Sticky */}
                         {!isViewOnly && (
                             <div 
                                 className={cn(

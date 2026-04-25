@@ -186,7 +186,7 @@ export function Sidebar() {
                             <User className="h-4 w-4" />
                             Profil Program Studi
                         </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
+                        <Link href="/eviden" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
                             <FolderOpen className="h-4 w-4" />
                             Dokumen Eviden
                         </Link>

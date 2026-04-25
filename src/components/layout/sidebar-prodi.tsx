@@ -39,7 +39,7 @@ export function SidebarProdi() {
         { name: 'Profil Program Studi', href: '/profil-prodi', icon: User },
         { name: 'Data LKPS', href: '/dashboard/lkps', icon: FileSpreadsheet },
         { name: 'Dokumen LED', href: '/led', icon: FileText }, 
-        { name: 'Dokumen Eviden', href: '#', icon: FolderOpen },
+        { name: 'Dokumen Eviden', href: '/eviden', icon: FolderOpen },
         { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
         { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },
         { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
