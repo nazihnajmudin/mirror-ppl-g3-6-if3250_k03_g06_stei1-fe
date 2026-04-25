@@ -71,6 +71,18 @@ export function SidebarProdi() {
         return (item.roleRequired as string[]).includes(user.role);
     });
 
+    const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        const hasUnsavedChanges = sessionStorage.getItem('unsavedChanges') === 'true';
+        if (hasUnsavedChanges) {
+            const confirmLeave = window.confirm("Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman ini?");
+            if (!confirmLeave) {
+                e.preventDefault(); // Batalkan navigasi
+            } else {
+                sessionStorage.removeItem('unsavedChanges'); // Bersihkan flag jika user setuju pergi
+            }
+        }
+    };
+
     return (
         <div className="flex h-screen w-64 flex-col border-r bg-gray-50/40 px-4 py-6 overflow-y-auto">
             <div className="mb-8 px-4">
