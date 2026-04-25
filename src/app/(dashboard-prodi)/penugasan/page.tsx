@@ -37,16 +37,23 @@ import type { User, ProdiAssignment } from "@/types/api.types"
 import apiClient from "@/lib/api-client"
 import { useUser } from "@/hooks/useUser"
 
-const kriteria = [
-  { id: "K1", label: "Visi, Misi, Tujuan & Strategi" },
-  { id: "K2", label: "Tata Pamong & Kerjasama" },
-  { id: "K3", label: "Mahasiswa" },
-  { id: "K4", label: "Sumber Daya Manusia" },
-  { id: "K5", label: "Keuangan, Sarana & Prasarana" },
-  { id: "K6", label: "Pendidikan" },
-  { id: "K7", label: "Penelitian" },
-  { id: "K8", label: "Pengabdian Masyarakat" },
-  { id: "K9", label: "Luaran dan Capaian Tridharma" },
+const KRITERIA_LAM_TEKNIK = [
+  { id: "C1", label: "Visi, Misi, Tujuan, dan Strategi" },
+  { id: "C2", label: "Tata Pamong, Tata Kelola, dan Kerja Sama" },
+  { id: "C3", label: "Relevansi Pendidikan, Penelitian, dan PkM" },
+  { id: "C4", label: "Sumber Daya Manusia" },
+  { id: "C5", label: "Sarana, Prasarana, dan K3L" },
+  { id: "C6", label: "Mahasiswa dan Luaran Mahasiswa" },
+  { id: "C7", label: "Sistem Penjaminan Mutu" },
+]
+
+const KRITERIA_LAM_INFOKOM = [
+  { id: "C1", label: "Budaya Mutu" },
+  { id: "C2", label: "Relevansi Pendidikan" },
+  { id: "C3", label: "Relevansi Penelitian" },
+  { id: "C4", label: "Relevansi Pengabdian kepada Masyarakat" },
+  { id: "C5", label: "Akuntabilitas" },
+  { id: "C6", label: "Diferensiasi Misi" },
 ]
 
 function makeInitials(name: string): string {
@@ -143,6 +150,9 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
   const [showHapusDialog, setShowHapusDialog] = React.useState(false)
   const [penugasanToDelete, setPenugasanToDelete] = React.useState<string | null>(null)
   const [toast, setToast] = React.useState<{ message: string; type: "success" | "error" } | null>(null)
+  const [lamTemplate, setLamTemplate] = React.useState<"LAM_TEKNIK" | "INFOKOM">("LAM_TEKNIK")
+
+  const kriteria = lamTemplate === "INFOKOM" ? KRITERIA_LAM_INFOKOM : KRITERIA_LAM_TEKNIK
 
   React.useEffect(() => {
     if (targetProdiId) {
@@ -200,10 +210,11 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
     }
 
     try {
+      const kriteriaWithTemplate = selectedKriteria.map(k => `${lamTemplate}:${k}`)
       const result = await addPenugasan({ 
           userId: selectedUserId, 
           prodiId: targetProdiId,
-          kriteria: selectedKriteria
+          kriteria: kriteriaWithTemplate
       })
       setPenugasanList((prev) => [result, ...prev])
       setSelectedKriteria([])
@@ -239,9 +250,17 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
   const assignedKriteriaSet = new Set<string>()
   penugasanList.forEach((p) => {
       const k = p.kriteria || p.indikator || []
-      k.forEach((item: string) => assignedKriteriaSet.add(item))
+      k.forEach((item: string) => {
+        const parts = item.split(':')
+        const tmpl = parts.length > 1 ? parts[0] : null
+        const id = parts.length > 1 ? parts[1] : item
+        if (!tmpl || tmpl === lamTemplate) {
+          assignedKriteriaSet.add(id)
+        }
+      })
   })
   const totalAssignedKriteria = assignedKriteriaSet.size
+
 
   const filteredPenugasan =
     filterAnggota === "Semua Anggota"
@@ -268,7 +287,12 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
       <header className="mb-8 flex justify-between items-start">
         <div>
             <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
-            <p className="text-sm text-gray-500 mt-1">Kelola penugasan kriteria akreditasi kepada anggota Tim Prodi.</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-gray-500">Kelola penugasan kriteria akreditasi kepada anggota Tim Prodi.</p>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${lamTemplate === "INFOKOM" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                {lamTemplate === "INFOKOM" ? "LAM Infokom" : "LAM Teknik"}
+              </span>
+            </div>
         </div>
         {isGuest && (
             <Button variant="ghost" onClick={() => router.push('/penugasan')} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 gap-2 font-semibold text-sm">
@@ -319,6 +343,21 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
             <CardTitle className="text-base font-bold text-gray-900">Tugaskan Anggota</CardTitle>
           </CardHeader>
           <CardContent className="px-6 py-5 space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Template LAM</label>
+              <select
+                value={lamTemplate}
+                onChange={(e) => {
+                  setLamTemplate(e.target.value as "LAM_TEKNIK" | "INFOKOM")
+                  setSelectedKriteria([])
+                }}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                <option value="LAM_TEKNIK">LAM Teknik (C1–C7)</option>
+                <option value="INFOKOM">LAM Infokom (C1–C6)</option>
+              </select>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">Pilih Anggota Tim Prodi</label>
               <select
@@ -483,11 +522,35 @@ function PenugasanDetailView({ targetProdiId }: { targetProdiId: string }) {
                             <div className="mt-1 w-full">
                                 {assignedKriteria.length > 0 ? (
                                     <div className="flex flex-wrap gap-1">
-                                        {assignedKriteria.map((k: string) => (
-                                            <span key={k} className="text-[10px] bg-white border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-medium shadow-sm">
-                                                {k}
-                                            </span>
-                                        ))}
+                                        {assignedKriteria.map((raw: string) => {
+                                          const parts = raw.split(':')
+                                          const tmplKey = parts.length > 1 ? parts[0] : null
+                                          const kriteriaId = parts.length > 1 ? parts[1] : raw
+                                          let isTeknik: boolean
+                                          let label = ''
+                                          if (tmplKey === 'LAM_TEKNIK') {
+                                            isTeknik = true
+                                            label = KRITERIA_LAM_TEKNIK.find(x => x.id === kriteriaId)?.label ?? ''
+                                          } else if (tmplKey === 'INFOKOM') {
+                                            isTeknik = false
+                                            label = KRITERIA_LAM_INFOKOM.find(x => x.id === kriteriaId)?.label ?? ''
+                                          } else {
+                                            const teknikMatch = KRITERIA_LAM_TEKNIK.find(x => x.id === kriteriaId)
+                                            isTeknik = !!teknikMatch
+                                            label = (teknikMatch ?? KRITERIA_LAM_INFOKOM.find(x => x.id === kriteriaId))?.label ?? ''
+                                          }
+
+                                          return (
+                                            <div key={raw} className="flex flex-col gap-0.5">
+                                              <span className="text-[10px] bg-white border border-gray-200 text-gray-700 px-1.5 py-0.5 rounded font-semibold shadow-sm">
+                                                {kriteriaId}{label ? ` — ${label}` : ''}
+                                              </span>
+                                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                                                isTeknik ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+                                              }`}>{isTeknik ? 'LAM Teknik' : 'LAM Infokom'}</span>
+                                            </div>
+                                          )
+                                        })}
                                     </div>
                                 ) : (
                                     <span className="text-[10px] text-gray-400 italic">Semua Kriteria / Umum</span>
