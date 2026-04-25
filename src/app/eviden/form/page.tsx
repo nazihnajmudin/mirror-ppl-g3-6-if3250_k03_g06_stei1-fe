@@ -7,13 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UploadCloud, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Music, Video, MonitorPlay, Save, Edit } from "lucide-react";
+import { UploadCloud, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Music, Video, MonitorPlay, Save, Edit, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import apiClient from "@/lib/api-client";
 import dynamic from 'next/dynamic';
 
-// Import React Quill secara dinamis (karena tidak mendukung SSR)
 import 'react-quill-new/dist/quill.snow.css';
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
@@ -34,7 +33,7 @@ const getFileIcon = (type: string) => {
     if (type.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
     if (type.includes('excel') || type.includes('spreadsheet')) return <FileSpreadsheet className="w-5 h-5 text-green-600" />;
     if (type.includes('audio')) return <Music className="w-5 h-5 text-purple-500" />;
-    if (type.includes('video')) return <Video className="w-5 h-5 text-pink-500" />;
+    if (type.includes('video') || type.includes('mp4')) return <Video className="w-5 h-5 text-pink-500" />;
     if (type.includes('powerpoint') || type.includes('presentation')) return <MonitorPlay className="w-5 h-5 text-orange-500" />;
     if (type.includes('zip') || type.includes('rar')) return <FileArchive className="w-5 h-5 text-yellow-600" />;
     return <FileText className="w-5 h-5 text-blue-500" />;
@@ -47,16 +46,27 @@ const getFileExtension = (filename: string, filetype: string) => {
     return 'FILE';
 };
 
+const formatBytes = (bytes: number, decimals = 2) => {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals < 0 ? 0 : decimals))} ${sizes[i]}`;
+};
+
 export default function EvidenFormPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, loading: userLoading } = useUser();
     
     const mode = searchParams.get('mode') as 'add' | 'edit' | 'view' || 'view';
+    const evidenId = searchParams.get('id');
     const isViewOnly = mode === 'view' || user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
 
     const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
     const [isProdiLoading, setIsProdiLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
     const [formData, setFormData] = useState({
         prodiId: "",
@@ -68,6 +78,7 @@ export default function EvidenFormPage() {
     });
     
     const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+    const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]); // Menyimpan ID file lama yang mau dihapus saat Edit
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,6 +93,7 @@ export default function EvidenFormPage() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, []);
 
+    // FETCH PRODI
     useEffect(() => {
         const fetchMyProdis = async () => {
             if (!user) return;
@@ -96,6 +108,45 @@ export default function EvidenFormPage() {
         };
         fetchMyProdis();
     }, [user]);
+
+    // FETCH DETAIL JIKA MODE EDIT ATAU VIEW
+    useEffect(() => {
+        const fetchDetail = async () => {
+            if (!evidenId) return;
+            setIsFetchingDetail(true);
+            try {
+                const res = await apiClient.get(`/eviden/${evidenId}`);
+                const data = res.data.data;
+                
+                setFormData({
+                    prodiId: data.prodiId,
+                    judul: data.judul,
+                    deskripsi: data.deskripsi || "",
+                    indikator: data.indikator || [],
+                    startDate: data.startDate ? data.startDate.split('T')[0] : "",
+                    endDate: data.endDate ? data.endDate.split('T')[0] : ""
+                });
+
+                // Mapping file dari database ke format state UI
+                if (data.files && data.files.length > 0) {
+                    setUploadedFiles(data.files.map((f: any) => ({
+                        id: f.id, // Menandai bahwa ini file lama dari DB
+                        name: f.originalFilename,
+                        type: f.mimeType,
+                        size: formatBytes(f.size),
+                        isExisting: true 
+                    })));
+                }
+            } catch (error) {
+                alert("Gagal mengambil detail eviden.");
+                router.push('/eviden');
+            } finally {
+                setIsFetchingDetail(false);
+            }
+        };
+
+        if (mode !== 'add') fetchDetail();
+    }, [evidenId, mode, router]);
 
     const markAsUnsaved = () => {
         if (!isViewOnly) sessionStorage.setItem('unsavedChanges', 'true');
@@ -133,17 +184,80 @@ export default function EvidenFormPage() {
         const newFiles = Array.from(files).map(f => ({
             name: f.name,
             type: f.type || "unknown",
-            size: (f.size / 1024 / 1024).toFixed(2) + " MB",
-            raw: f
+            size: formatBytes(f.size),
+            raw: f, // File mentah untuk dikirim via FormData
+            isExisting: false // Menandai ini file baru
         }));
         setUploadedFiles(prev => [...prev, ...newFiles]);
         markAsUnsaved();
     };
 
-    const handleSave = () => {
-        sessionStorage.removeItem('unsavedChanges');
-        alert("Eviden berhasil disimpan!");
-        router.push('/eviden');
+    const handleRemoveFile = (index: number) => {
+        const fileToRemove = uploadedFiles[index];
+        // Jika file sudah ada di database, simpan ID-nya untuk dihapus di backend
+        if (fileToRemove.isExisting && fileToRemove.id) {
+            setDeletedFileIds(prev => [...prev, fileToRemove.id]);
+        }
+        
+        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+        markAsUnsaved();
+    };
+
+    const handleDownloadFile = async (fileId: string, filename: string) => {
+        try {
+            const response = await apiClient.get(`/eviden/file/download/${fileId}`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            alert(`Gagal mengunduh file.`);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!formData.prodiId || !formData.judul) {
+            alert("Program Studi dan Judul wajib diisi.");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const formDataObj = new FormData();
+            formDataObj.append('prodiId', formData.prodiId);
+            formDataObj.append('judul', formData.judul);
+            formDataObj.append('deskripsi', formData.deskripsi);
+            formDataObj.append('indikator', JSON.stringify(formData.indikator));
+            
+            if (formData.startDate) formDataObj.append('startDate', formData.startDate);
+            if (formData.endDate) formDataObj.append('endDate', formData.endDate);
+            if (deletedFileIds.length > 0) formDataObj.append('deletedFileIds', JSON.stringify(deletedFileIds));
+
+            // Append hanya file baru (yang tidak punya label isExisting)
+            uploadedFiles.forEach(f => {
+                if (!f.isExisting && f.raw) {
+                    formDataObj.append('files', f.raw);
+                }
+            });
+
+            if (mode === 'edit' && evidenId) {
+                await apiClient.put(`/eviden/${evidenId}`, formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
+            } else {
+                await apiClient.post('/eviden', formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
+            }
+
+            sessionStorage.removeItem('unsavedChanges');
+            alert("Eviden berhasil disimpan!");
+            router.push('/eviden');
+        } catch (error: any) {
+            alert(error?.response?.data?.message || "Terjadi kesalahan saat menyimpan eviden.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -157,7 +271,7 @@ export default function EvidenFormPage() {
         }
     };
 
-    if (userLoading || isProdiLoading) return <div className="p-8 text-gray-500 font-medium animate-pulse">Memuat form eviden...</div>;
+    if (userLoading || isProdiLoading || isFetchingDetail) return <div className="p-8 text-gray-500 font-medium flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin"/> Memuat form eviden...</div>;
     if (!user) return null;
 
     return (
@@ -173,16 +287,17 @@ export default function EvidenFormPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     {isViewOnly && user.role !== 'SUPER_ADMIN' && user.role !== 'PIMPINAN' ? (
-                        <Button onClick={() => router.push(`/eviden/form?mode=edit&id=1`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
+                        <Button onClick={() => router.push(`/eviden/form?mode=edit&id=${evidenId}`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
                             <Edit className="w-4 h-4" /> Mulai Edit
                         </Button>
                     ) : !isViewOnly ? (
                         <>
-                            <Button variant="outline" onClick={handleCancel} className="font-bold border-gray-300 text-gray-700">
+                            <Button variant="outline" onClick={handleCancel} disabled={isSaving} className="font-bold border-gray-300 text-gray-700">
                                 Batal / Discard
                             </Button>
-                            <Button onClick={handleSave} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
-                                <Save className="w-4 h-4" /> Simpan Eviden
+                            <Button onClick={handleSave} disabled={isSaving} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md min-w-[160px]">
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />} 
+                                {isSaving ? "Menyimpan..." : "Simpan Eviden"}
                             </Button>
                         </>
                     ) : null}
@@ -196,7 +311,7 @@ export default function EvidenFormPage() {
                     <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-5">
                         
                         <div>
-                            <Label className="text-gray-700 font-bold mb-1.5 block">Program Studi</Label>
+                            <Label className="text-gray-700 font-bold mb-1.5 block">Program Studi <span className="text-red-500">*</span></Label>
                             <Select disabled={isViewOnly} value={formData.prodiId} onValueChange={handleProdiChange}>
                                 <SelectTrigger className="w-full h-10"><SelectValue placeholder="Pilih Program Studi" /></SelectTrigger>
                                 <SelectContent>
@@ -217,7 +332,7 @@ export default function EvidenFormPage() {
                         </div>
 
                         <div>
-                            <Label className="text-gray-700 font-bold mb-1.5 block">Judul Eviden</Label>
+                            <Label className="text-gray-700 font-bold mb-1.5 block">Judul Eviden <span className="text-red-500">*</span></Label>
                             <Input disabled={isViewOnly} value={formData.judul} onChange={(e) => handleFormChange('judul', e.target.value)} placeholder="Masukkan judul..." />
                         </div>
 
@@ -259,7 +374,6 @@ export default function EvidenFormPage() {
                 </div>
 
                 {/* BAGIAN KANAN: Daftar File & Dropzone Terintegrasi */}
-                {/* PERBAIKAN: Mengubah h-[calc(...)] dan sticky menjadi h-full agar stretch sejajar dengan box kiri */}
                 <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4 border-b pb-4 shrink-0">
                         <h3 className="font-bold text-gray-900">Daftar File Diupload</h3>
@@ -268,7 +382,6 @@ export default function EvidenFormPage() {
                         </span>
                     </div>
 
-                    {/* Container Scroll Terintegrasi */}
                     <div className="flex-1 overflow-y-auto pr-3 -mr-3 pb-4 space-y-3 custom-scrollbar relative">
                         {/* 1. File List */}
                         {uploadedFiles.map((file, idx) => (
@@ -284,18 +397,27 @@ export default function EvidenFormPage() {
                                                 {getFileExtension(file.name, file.type)}
                                             </span>
                                             <span className="text-[11px] text-gray-500">{file.size}</span>
+                                            {file.isExisting === false && <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">BARU</span>}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="shrink-0 pl-2">
                                     {isViewOnly ? (
-                                        <Button size="icon-sm" variant="ghost" className="w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50">
+                                        <Button size="icon-sm" variant="ghost" onClick={() => file.id && handleDownloadFile(file.id, file.name)} className="w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50">
                                             <Download className="w-4 h-4" />
                                         </Button>
                                     ) : (
-                                        <Button size="icon-sm" variant="ghost" onClick={() => { setUploadedFiles(prev => prev.filter((_, i) => i !== idx)); markAsUnsaved(); }} className="w-8 h-8 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50">
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            {/* Tetap bisa download file yang sudah tersimpan di database saat mode edit */}
+                                            {file.isExisting && file.id && (
+                                                <Button size="icon-sm" variant="ghost" onClick={() => handleDownloadFile(file.id, file.name)} className="w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50">
+                                                    <Download className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                            <Button size="icon-sm" variant="ghost" onClick={() => handleRemoveFile(idx)} className="w-8 h-8 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50">
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
