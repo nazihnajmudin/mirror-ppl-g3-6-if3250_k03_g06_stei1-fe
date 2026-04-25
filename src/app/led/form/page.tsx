@@ -36,6 +36,29 @@ const SUBSECTIONS = [
 ];
 
 const TEMPLATES: Record<string, string> = {
+  halaman_muka: `<p style="text-align: center"><strong>HALAMAN MUKA</strong></p>
+<p>&nbsp;</p>
+<p style="text-align: center">[ Logo Perguruan Tinggi ]</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p style="text-align: center"><strong>LAPORAN EVALUASI DIRI PROGRAM STUDI</strong></p>
+<p style="text-align: center"><strong>AKREDITASI PROGRAM STUDI</strong></p>
+<p>&nbsp;</p>
+<p style="text-align: center"><em><strong>PROGRAM DAN NAMA PROGRAM STUDI</strong></em></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p style="text-align: center"><strong>UNIVERSITAS/ INSTITUT/ SEKOLAH TINGGI/ POLITEKNIK/ AKADEMI/ AKADEMI KOMUNITAS</strong></p>
+<p>&nbsp;</p>
+<p style="text-align: center">..................................................</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p style="text-align: center"><strong>NAMA KOTA KEDUDUKAN PERGURUAN TINGGI</strong></p>
+<p style="text-align: center"><strong>TAHUN ..............</strong></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p><em>Catatan: Kelengkapan isian setiap kriteria mengacu pada Pedoman Penyusunan Laporan Evaluasi Diri Program Studi</em></p>`,
+
   identitas_pengusul: `<h2>IDENTITAS PENGUSUL</h2>
 <p><strong>Perguruan Tinggi</strong> : .........................................................................................</p>
 <p><strong>Unit Pengelola Program Studi</strong> : .........................................................................................</p>
@@ -440,6 +463,7 @@ interface NavSection {
 }
 
 const ALL_SECTIONS: NavSection[] = [
+  { key: "halaman_muka",       label: "Halaman Muka",            groupId: "pendahuluan", groupLabel: "Pendahuluan", template: TEMPLATES.halaman_muka },
   { key: "identitas_pengusul",  label: "Identitas Pengusul",      groupId: "pendahuluan", groupLabel: "Pendahuluan", template: TEMPLATES.identitas_pengusul },
   { key: "identitas_tim",       label: "Identitas Tim Penyusun",  groupId: "pendahuluan", groupLabel: "Pendahuluan", template: TEMPLATES.identitas_tim },
   { key: "kata_pengantar",      label: "Kata Pengantar",          groupId: "pendahuluan", groupLabel: "Pendahuluan", template: TEMPLATES.kata_pengantar },
@@ -536,7 +560,9 @@ function LEDFormContent() {
   const [versions, setVersions] = useState<FormVersion[]>([]);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [activePeriode] = useState<string>(new Date().getFullYear().toString());
+  const [activePeriode, setActivePeriode] = useState<string>(new Date().getFullYear().toString());
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([new Date().getFullYear().toString()]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSaveRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
@@ -554,6 +580,41 @@ function LEDFormContent() {
       .then((res) => setProdiName(res.data.data?.fullname ?? "Program Studi"))
       .catch(() => setProdiName("Program Studi"));
   }, [prodiId]);
+
+  useEffect(() => {
+    if (!prodiId) return;
+    setHistoryLoading(true);
+    apiClient.get(`/led/form/history/${prodiId}/${activePeriode}?template=LAM_TEKNIK`)
+      .then(async (res) => {
+        const data: any[] = res.data.data || [];
+        const mapped: FormVersion[] = data.map((v) => ({
+          id: v.id,
+          createdAt: new Date(v.createdAt),
+          periode: v.periode,
+          createdByName: v.createdBy?.name,
+        }));
+        setVersions(mapped);
+        setAvailablePeriods((prev) => {
+          const allPeriods = new Set([...prev, ...data.map((v) => v.periode)]);
+          return Array.from(allPeriods).sort();
+        });
+        if (mapped.length > 0) {
+          const latestId = mapped[0].id;
+          setActiveVersionId(latestId);
+          try {
+            const vRes = await apiClient.get(`/led/form/${latestId}`);
+            const raw = vRes.data.data?.content;
+            const parsed: Record<string, string> = typeof raw === 'string' ? JSON.parse(raw) : (raw ?? {});
+            setContent(parsed);
+          } catch { /* silently fail, template defaults will show */ }
+        } else {
+          setActiveVersionId(null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }, [prodiId, activePeriode]);
+
 
   const editor = useEditor({
     extensions: [
@@ -581,6 +642,21 @@ function LEDFormContent() {
     [editor, activeKey]
   );
 
+  const handleLoadVersion = useCallback(async (versionId: string) => {
+    try {
+      const res = await apiClient.get(`/led/form/${versionId}`);
+      const raw = res.data.data?.content;
+      const parsed: Record<string, string> = typeof raw === "string" ? JSON.parse(raw) : (raw ?? {});
+      setContent((prev) => ({ ...prev, ...parsed }));
+      if (editor) editor.commands.setContent(parsed[activeKey] ?? "", { emitUpdate: false });
+      setActiveVersionId(versionId);
+      setShowHistory(false);
+      toast({ title: "Versi dimuat", description: "Konten versi yang dipilih berhasil dimuat ke editor." });
+    } catch {
+      toast({ variant: "destructive", title: "Gagal memuat versi", description: "Terjadi kesalahan." });
+    }
+  }, [editor, activeKey, toast]);
+
   useEffect(() => {
     if (!editor) return;
     const newContent = content[activeKey] ?? "";
@@ -592,14 +668,21 @@ function LEDFormContent() {
   const handleSave = useCallback(async () => {
     if (!editor || !prodiId) return;
     const html = editor.getHTML();
-    setContent((prev) => ({ ...prev, [activeKey]: html }));
+    const allContent = { ...content, [activeKey]: html };
+    setContent(allContent);
     setSaveStatus("saving");
     try {
-      await new Promise((r) => setTimeout(r, 400));
-      const newVersion: FormVersion = {
-        id: Date.now().toString(),
-        createdAt: new Date(),
+      const res = await apiClient.post(`/led/form/${prodiId}`, {
+        template: "LAM_TEKNIK",
         periode: activePeriode,
+        content: JSON.stringify(allContent),
+      });
+      const v = res.data.data;
+      const newVersion: FormVersion = {
+        id: v.id,
+        createdAt: new Date(v.createdAt),
+        periode: v.periode,
+        createdByName: v.createdBy?.name,
       };
       setVersions((prev) => [newVersion, ...prev]);
       setActiveVersionId(newVersion.id);
@@ -619,7 +702,8 @@ function LEDFormContent() {
     setIsExporting(true);
     toast({ title: "Menyiapkan Unduhan", description: "Dokumen Word sedang digenerate..." });
     try {
-      const response = await apiClient.get(`/led/export/form/${prodiId}`, { responseType: "blob" });
+      const exportId = activeVersionId || prodiId;
+      const response = await apiClient.get(`/led/export/form/${exportId}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -636,11 +720,11 @@ function LEDFormContent() {
       window.URL.revokeObjectURL(url);
       toast({ title: "Unduhan Berhasil", description: "File LED berhasil diunduh." });
     } catch {
-      toast({ variant: "destructive", title: "Unduhan Gagal", description: "Endpoint export belum tersedia. Hubungi tim backend." });
+      toast({ variant: "destructive", title: "Unduhan Gagal", description: "Terjadi kesalahan saat mengunduh." });
     } finally {
       setIsExporting(false);
     }
-  }, [prodiId, prodiName, toast]);
+  }, [prodiId, prodiName, activeVersionId, toast]);
 
   const getCriteriaProgress = (criteriaId: string) => {
     const secs = ALL_SECTIONS.filter((s) => s.criteriaId === criteriaId);
@@ -718,17 +802,26 @@ function LEDFormContent() {
             </button>
             {showHistory && (
               <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Riwayat Versi · {activePeriode}</p>
+                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Riwayat Versi</p>
+                  <select
+                    value={activePeriode}
+                    onChange={(e) => { setActivePeriode(e.target.value); setActiveVersionId(null); }}
+                    className="text-[11px] border border-gray-200 rounded px-1.5 py-0.5 bg-white text-gray-600 focus:outline-none"
+                  >
+                    {availablePeriods.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  {versions.length === 0 ? (
+                  {historyLoading ? (
+                    <div className="p-5 text-sm text-gray-400 text-center">Memuat riwayat...</div>
+                  ) : versions.length === 0 ? (
                     <div className="p-5 text-sm text-gray-400 text-center">Belum ada versi tersimpan.<br />Klik Simpan untuk membuat versi pertama.</div>
                   ) : (
                     versions.map((v, idx) => (
                       <div
                         key={v.id}
-                        onClick={() => { setActiveVersionId(v.id); setShowHistory(false); }}
+                        onClick={() => handleLoadVersion(v.id)}
                         className={cn(
                           "px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 flex items-start gap-3",
                           activeVersionId === v.id && "bg-blue-50"
@@ -744,6 +837,7 @@ function LEDFormContent() {
                           <p className="text-[11px] text-gray-500 mt-0.5">
                             {v.createdAt.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
+                          {v.createdByName && <p className="text-[10px] text-gray-400 truncate">{v.createdByName}</p>}
                         </div>
                       </div>
                     ))

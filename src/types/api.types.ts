@@ -110,11 +110,17 @@ export interface DashboardData {
     };
   };
   simulationScore: number;
+  lamTemplate: 'LAM_TEKNIK' | 'INFOKOM';
   criteria: Array<{
     id: string;
     code: string;
     name: string;
     progress: number;
+    subsections: Array<{
+      id: string;
+      name: string;
+      progress: number;
+    }>;
   }>;
   criticalIndicators: Array<{
     id: string;
