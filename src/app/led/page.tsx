@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X } from "lucide-react";
+import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X, PenLine, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
 import { useUser } from "@/hooks/useUser";
@@ -135,6 +135,7 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
     const activeDoc = history.find(d => d.id === activeDocumentId);
     const hasFinalDocument = history.some(d => d.status === 'FINAL');
     const hasDraftDocuments = history.some(d => d.status === 'DRAFT');
+    const [selectedTemplate, setSelectedTemplate] = useState<'lam-teknik' | 'lam-infokom'>('lam-teknik');
 
     // Fetch Nama Prodi
     useEffect(() => {
@@ -352,9 +353,34 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
         <div className="space-y-6 relative">
         
         {/* 1. HEADER */}
-        <header className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
-            <p className="text-sm text-gray-500 mt-1">Manajemen arsip Laporan Evaluasi Diri (LED)</p>
+        <header className="mb-6 flex items-start justify-between gap-4">
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900">{prodiName}</h1>
+                <p className="text-sm text-gray-500 mt-1">Manajemen arsip Laporan Evaluasi Diri (LED)</p>
+            </div>
+            {canUpload && (
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Template Selector Tabs */}
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold">
+                        <button
+                            onClick={() => setSelectedTemplate('lam-teknik')}
+                            className={cn("px-3 py-1.5", selectedTemplate === 'lam-teknik' ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50")}
+                        >LAM Teknik</button>
+                        <button
+                            onClick={() => setSelectedTemplate('lam-infokom')}
+                            className={cn("px-3 py-1.5 border-l border-gray-200", selectedTemplate === 'lam-infokom' ? "bg-emerald-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50")}
+                        >LAM INFOKOM</button>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => router.push(`/led/form?prodiId=${targetProdiId}&template=${selectedTemplate}`)}
+                        className="gap-2 text-sm font-semibold"
+                    >
+                        <PenLine className="w-4 h-4" />
+                        Isi Formulir LED
+                    </Button>
+                </div>
+            )}
         </header>
 
         {/* 2. SELECTION PERIODE & NAVIGASI */}
