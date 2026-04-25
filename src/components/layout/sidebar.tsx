@@ -70,6 +70,18 @@ export function Sidebar() {
         setExpanded(expanded === section ? null : section);
     };
 
+    const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        const hasUnsavedChanges = sessionStorage.getItem('unsavedChanges') === 'true';
+        if (hasUnsavedChanges) {
+            const confirmLeave = window.confirm("Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman ini?");
+            if (!confirmLeave) {
+                e.preventDefault(); // Batalkan navigasi
+            } else {
+                sessionStorage.removeItem('unsavedChanges'); // Bersihkan flag jika user setuju pergi
+            }
+        }
+    };
+
     const isSuperOrPimpinan = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
 
     // Style constants
@@ -174,7 +186,7 @@ export function Sidebar() {
                             <User className="h-4 w-4" />
                             Profil Program Studi
                         </Link>
-                        <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
+                        <Link href="/eviden" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
                             <FolderOpen className="h-4 w-4" />
                             Dokumen Eviden
                         </Link>
