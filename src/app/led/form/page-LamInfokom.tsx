@@ -9,7 +9,8 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TextAlign from "@tiptap/extension-text-align";
-import {AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, FileText, Heading1, Heading2, History, Italic, List, ListOrdered, Save, Table as TableIcon,} from "lucide-react";
+import UnderlineExtension from "@tiptap/extension-underline";
+import {AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, FileText, Heading1, Heading2, History, Italic, List, ListOrdered, Minus, Plus, Redo2, Save, Table as TableIcon, Trash2, Underline as UnderlineIcon, Undo2,} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -603,107 +604,55 @@ const hasContent = (html: string) => !EMPTY_CONTENT.includes((html ?? "").trim()
 function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
   if (!editor) return null;
 
-  const btn = (active: boolean) =>
+  const btn = (active: boolean, disabled = false) =>
     cn(
       "p-1.5 rounded text-gray-600 hover:bg-gray-200 transition-colors",
-      active && "bg-gray-200 text-gray-900"
+      active && "bg-gray-200 text-gray-900",
+      disabled && "opacity-30 cursor-not-allowed hover:bg-transparent"
     );
+  const prevent = (e: React.MouseEvent) => e.preventDefault();
+  const sep = <div className="w-px h-5 bg-gray-300 mx-1" />;
+  const isInTable = editor.isActive("table");
 
   return (
     <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-gray-200 bg-gray-50/50 shrink-0">
-      <button
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        className={btn(editor.isActive("heading", { level: 1 }))}
-        title="H1"
-      >
-        <Heading1 className="w-4 h-4" />
-      </button>
-
-      <button
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={btn(editor.isActive("heading", { level: 2 }))}
-        title="H2"
-      >
-        <Heading2 className="w-4 h-4" />
-      </button>
-
-      <div className="w-px h-5 bg-gray-300 mx-1" />
-
-      <button
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={btn(editor.isActive("bold"))}
-        title="Bold"
-      >
-        <Bold className="w-4 h-4" />
-      </button>
-
-      <button
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={btn(editor.isActive("italic"))}
-        title="Italic"
-      >
-        <Italic className="w-4 h-4" />
-      </button>
-
-      <div className="w-px h-5 bg-gray-300 mx-1" />
-
-      <button
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={btn(editor.isActive("bulletList"))}
-        title="Bullet List"
-      >
-        <List className="w-4 h-4" />
-      </button>
-
-      <button
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={btn(editor.isActive("orderedList"))}
-        title="Numbered List"
-      >
-        <ListOrdered className="w-4 h-4" />
-      </button>
-
-      <div className="w-px h-5 bg-gray-300 mx-1" />
-
-      <button
-        onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        className={btn(editor.isActive({ textAlign: "left" }))}
-        title="Align Left"
-      >
-        <AlignLeft className="w-4 h-4" />
-      </button>
-
-      <button
-        onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        className={btn(editor.isActive({ textAlign: "center" }))}
-        title="Align Center"
-      >
-        <AlignCenter className="w-4 h-4" />
-      </button>
-
-      <button
-        onClick={() => editor.chain().focus().setTextAlign("right").run()}
-        className={btn(editor.isActive({ textAlign: "right" }))}
-        title="Align Right"
-      >
-        <AlignRight className="w-4 h-4" />
-      </button>
-
-      <div className="w-px h-5 bg-gray-300 mx-1" />
-
-      <button
-        onClick={() =>
-          editor
-            .chain()
-            .focus()
-            .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-            .run()
-        }
-        className={btn(false)}
-        title="Insert Table"
-      >
-        <TableIcon className="w-4 h-4" />
-      </button>
+      {/* Undo / Redo */}
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className={btn(false, !editor.can().undo())} title="Undo"><Undo2 className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className={btn(false, !editor.can().redo())} title="Redo"><Redo2 className="w-4 h-4" /></button>
+      {sep}
+      {/* Headings */}
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={btn(editor.isActive("heading", { level: 1 }))} title="Heading 1"><Heading1 className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={btn(editor.isActive("heading", { level: 2 }))} title="Heading 2"><Heading2 className="w-4 h-4" /></button>
+      {sep}
+      {/* Inline formatting */}
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleBold().run()} className={btn(editor.isActive("bold"))} title="Bold"><Bold className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleItalic().run()} className={btn(editor.isActive("italic"))} title="Italic"><Italic className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleUnderline().run()} className={btn(editor.isActive("underline"))} title="Underline"><UnderlineIcon className="w-4 h-4" /></button>
+      {sep}
+      {/* Lists */}
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleBulletList().run()} className={btn(editor.isActive("bulletList"))} title="Bullet List"><List className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive("orderedList"))} title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
+      {sep}
+      {/* Alignment */}
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("left").run()} className={btn(editor.isActive({ textAlign: "left" }))} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("center").run()} className={btn(editor.isActive({ textAlign: "center" }))} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("right").run()} className={btn(editor.isActive({ textAlign: "right" }))} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+      {sep}
+      {/* Insert table */}
+      <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className={btn(false)} title="Sisipkan Tabel"><TableIcon className="w-4 h-4" /></button>
+      {/* Table operations — hanya muncul saat kursor di dalam tabel */}
+      {isInTable && (<>
+        {sep}
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().addRowBefore().run()} className={btn(false)} title="Tambah baris di atas"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Plus className="w-3 h-3" />Baris↑</span></button>
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().addRowAfter().run()} className={btn(false)} title="Tambah baris di bawah"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Plus className="w-3 h-3" />Baris↓</span></button>
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().deleteRow().run()} className={btn(false)} title="Hapus baris"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Minus className="w-3 h-3" />Baris</span></button>
+        {sep}
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().addColumnBefore().run()} className={btn(false)} title="Tambah kolom di kiri"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Plus className="w-3 h-3" />Kol←</span></button>
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().addColumnAfter().run()} className={btn(false)} title="Tambah kolom di kanan"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Plus className="w-3 h-3" />Kol→</span></button>
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().deleteColumn().run()} className={btn(false)} title="Hapus kolom"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Minus className="w-3 h-3" />Kol</span></button>
+        {sep}
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().deleteTable().run()} className={cn(btn(false), "text-red-500 hover:bg-red-50")} title="Hapus tabel"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Trash2 className="w-3 h-3" />Tabel</span></button>
+      </>)}
     </div>
   );
 }
@@ -806,6 +755,7 @@ function LAMInfokomFormContent() {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      UnderlineExtension,
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,

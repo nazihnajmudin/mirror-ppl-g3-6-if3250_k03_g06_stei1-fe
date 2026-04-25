@@ -72,3 +72,7 @@
 .tiptap em {
   font-style: italic;
 }
+
+.tiptap u {
+  text-decoration: underline;
+}
