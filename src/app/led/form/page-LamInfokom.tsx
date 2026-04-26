@@ -739,7 +739,9 @@ function LAMInfokomFormContent() {
   const [versions, setVersions] = useState<FormVersion[]>([]);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [activePeriode] = useState<string>(new Date().getFullYear().toString());
+  const [activePeriode, setActivePeriode] = useState<string>(new Date().getFullYear().toString());
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([new Date().getFullYear().toString()]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSaveRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
@@ -760,12 +762,46 @@ function LAMInfokomFormContent() {
 
   useEffect(() => {
     if (!prodiId) return;
-
     apiClient
       .get(`/prodi/${prodiId}`)
       .then((res) => setProdiName(res.data.data?.fullname ?? "Program Studi"))
       .catch(() => setProdiName("Program Studi"));
   }, [prodiId]);
+
+  useEffect(() => {
+    if (!prodiId) return;
+    setHistoryLoading(true);
+    apiClient.get(`/led/form/history/${prodiId}/${activePeriode}?template=INFOKOM`)
+      .then(async (res) => {
+        const data: any[] = res.data.data || [];
+        const mapped: FormVersion[] = data.map((v) => ({
+          id: v.id,
+          createdAt: new Date(v.createdAt),
+          periode: v.periode,
+          createdByName: v.createdBy?.name,
+        }));
+        setVersions(mapped);
+        setAvailablePeriods((prev) => {
+          const allPeriods = new Set([...prev, ...data.map((v) => v.periode)]);
+          return Array.from(allPeriods).sort();
+        });
+        if (mapped.length > 0) {
+          const latestId = mapped[0].id;
+          setActiveVersionId(latestId);
+          try {
+            const vRes = await apiClient.get(`/led/form/${latestId}`);
+            const raw = vRes.data.data?.content;
+            const parsed: Record<string, string> = typeof raw === 'string' ? JSON.parse(raw) : (raw ?? {});
+            setContent(parsed);
+          } catch { /* silently fail, template defaults will show */ }
+        } else {
+          setActiveVersionId(null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }, [prodiId, activePeriode]);
+
 
   const editor = useEditor({
     extensions: [
@@ -793,21 +829,30 @@ function LAMInfokomFormContent() {
   const handleSelectSection = useCallback(
     (key: string) => {
       if (!editor) return;
-
-      setContent((prev) => ({
-        ...prev,
-        [activeKey]: editor.getHTML(),
-      }));
+      setContent((prev) => ({ ...prev, [activeKey]: editor.getHTML() }));
       setActiveKey(key);
     },
     [editor, activeKey]
   );
 
+  const handleLoadVersion = useCallback(async (versionId: string) => {
+    try {
+      const res = await apiClient.get(`/led/form/${versionId}`);
+      const raw = res.data.data?.content;
+      const parsed: Record<string, string> = typeof raw === "string" ? JSON.parse(raw) : (raw ?? {});
+      setContent((prev) => ({ ...prev, ...parsed }));
+      if (editor) editor.commands.setContent(parsed[activeKey] ?? "", { emitUpdate: false });
+      setActiveVersionId(versionId);
+      setShowHistory(false);
+      toast({ title: "Versi dimuat", description: "Konten versi yang dipilih berhasil dimuat ke editor." });
+    } catch {
+      toast({ variant: "destructive", title: "Gagal memuat versi", description: "Terjadi kesalahan." });
+    }
+  }, [editor, activeKey, toast]);
+
   useEffect(() => {
     if (!editor) return;
-
     const newContent = content[activeKey] ?? "";
-
     if (editor.getHTML() !== newContent) {
       editor.commands.setContent(newContent);
     }
@@ -815,21 +860,22 @@ function LAMInfokomFormContent() {
 
   const handleSave = useCallback(async () => {
     if (!editor || !prodiId) return;
-
     const html = editor.getHTML();
-
-    setContent((prev) => ({
-      ...prev,
-      [activeKey]: html,
-    }));
+    const allContent = { ...content, [activeKey]: html };
+    setContent(allContent);
     setSaveStatus("saving");
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      const newVersion: FormVersion = {
-        id: Date.now().toString(),
-        createdAt: new Date(),
+      const res = await apiClient.post(`/led/form/${prodiId}`, {
+        template: "INFOKOM",
         periode: activePeriode,
+        content: JSON.stringify(allContent),
+      });
+      const v = res.data.data;
+      const newVersion: FormVersion = {
+        id: v.id,
+        createdAt: new Date(v.createdAt),
+        periode: v.periode,
+        createdByName: v.createdBy?.name,
       };
       setVersions((prev) => [newVersion, ...prev]);
       setActiveVersionId(newVersion.id);
@@ -837,33 +883,21 @@ function LAMInfokomFormContent() {
       setSaveStatus("saved");
     } catch {
       setSaveStatus("idle");
-      toast({
-        variant: "destructive",
-        title: "Gagal menyimpan",
-        description: "Terjadi kesalahan. Coba lagi.",
-      });
+      toast({ variant: "destructive", title: "Gagal menyimpan", description: "Terjadi kesalahan. Coba lagi." });
     }
   }, [editor, prodiId, activeKey, activePeriode, content, toast]);
 
-  useEffect(() => {
-    handleSaveRef.current = handleSave;
-  }, [handleSave]);
+  useEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
 
-  useEffect(
-    () => () => {
-      if (autoSaveTimer.current) {
-        clearTimeout(autoSaveTimer.current);
-      }
-    },
-    []
-  );
+  useEffect(() => () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); }, []);
 
   const handleExport = useCallback(async () => {
     if (!prodiId) return;
     setIsExporting(true);
     toast({ title: "Menyiapkan Unduhan", description: "Dokumen Word sedang digenerate..." });
     try {
-      const response = await apiClient.get(`/led/export/form/${prodiId}`, { responseType: "blob" });
+      const exportId = activeVersionId || prodiId;
+      const response = await apiClient.get(`/led/export/form/${exportId}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -880,11 +914,11 @@ function LAMInfokomFormContent() {
       window.URL.revokeObjectURL(url);
       toast({ title: "Unduhan Berhasil", description: "File LED berhasil diunduh." });
     } catch {
-      toast({ variant: "destructive", title: "Unduhan Gagal", description: "Endpoint export belum tersedia. Hubungi tim backend." });
+      toast({ variant: "destructive", title: "Unduhan Gagal", description: "Terjadi kesalahan saat mengunduh." });
     } finally {
       setIsExporting(false);
     }
-  }, [prodiId, prodiName, toast]);
+  }, [prodiId, prodiName, activeVersionId, toast]);
 
   const getCriteriaProgress = (criteriaId: string) => {
     const sections = ALL_SECTIONS.filter(
@@ -988,17 +1022,26 @@ function LAMInfokomFormContent() {
             </button>
             {showHistory && (
               <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Riwayat Versi · {activePeriode}</p>
+                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Riwayat Versi</p>
+                  <select
+                    value={activePeriode}
+                    onChange={(e) => { setActivePeriode(e.target.value); setActiveVersionId(null); }}
+                    className="text-[11px] border border-gray-200 rounded px-1.5 py-0.5 bg-white text-gray-600 focus:outline-none"
+                  >
+                    {availablePeriods.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  {versions.length === 0 ? (
+                  {historyLoading ? (
+                    <div className="p-5 text-sm text-gray-400 text-center">Memuat riwayat...</div>
+                  ) : versions.length === 0 ? (
                     <div className="p-5 text-sm text-gray-400 text-center">Belum ada versi tersimpan.<br />Klik Simpan untuk membuat versi pertama.</div>
                   ) : (
                     versions.map((v, idx) => (
                       <div
                         key={v.id}
-                        onClick={() => { setActiveVersionId(v.id); setShowHistory(false); }}
+                        onClick={() => handleLoadVersion(v.id)}
                         className={cn(
                           "px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 flex items-start gap-3",
                           activeVersionId === v.id && "bg-blue-50"
@@ -1014,6 +1057,7 @@ function LAMInfokomFormContent() {
                           <p className="text-[11px] text-gray-500 mt-0.5">
                             {v.createdAt.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
+                          {v.createdByName && <p className="text-[10px] text-gray-400 truncate">{v.createdByName}</p>}
                         </div>
                       </div>
                     ))
