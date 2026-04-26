@@ -4,6 +4,8 @@ export interface TableConfig {
   startCol: number; // 1-indexed for ExcelJS
   columns: any[];
   nestedHeaders?: any[][];
+  keys?: string[]; // Map object keys to columns
+  columnLabels?: string[]; // Display labels for columns
 }
 
 export const tableConfigs: Record<string, TableConfig> = {
@@ -11,6 +13,8 @@ export const tableConfigs: Record<string, TableConfig> = {
     title: 'Daftar Program Studi di UPPS',
     startRow: 17,
     startCol: 2,
+    keys: ['no', 'jenis_program', 'nama_prodi', 'status_akreditasi', 'no_sk', 'tgl_kadaluarsa', 'jumlah_mahasiswa'],
+    columnLabels: ['No', 'Jenis Program', 'Nama Program Studi', 'Status Akreditasi', 'No. SK', 'Tgl. Kadaluarsa', 'Jumlah Mahasiswa'],
     columns: [
       { data: 0, type: 'numeric', width: 40 },
       { data: 1, type: 'text', width: 150 },
@@ -35,6 +39,8 @@ export const tableConfigs: Record<string, TableConfig> = {
     title: 'Disiplin Teknik Keinsinyuran (PSPPI)',
     startRow: 17,
     startCol: 2,
+    keys: ['no', 'disiplin', 'penyelenggaraan_ya', 'penyelenggaraan_tidak'],
+    columnLabels: ['No', 'Disiplin', 'Ya', 'Tidak'],
     columns: [
       { data: 0, type: 'numeric', width: 40 },
       { data: 1, type: 'text', width: 300 },
@@ -50,10 +56,26 @@ export const tableConfigs: Record<string, TableConfig> = {
       ['Ya', 'Tidak'],
     ],
   },
+  '1': {
+    title: 'Visi Misi Tujuan Strategi',
+    startRow: 10,
+    startCol: 2,
+    keys: ['no', 'jenis_vmts', 'pernyataan', 'no_sk', 'link_dokumen'],
+    columnLabels: ['No.', 'Jenis VMTS', 'Pernyataan', 'No. SK', 'Link Dokumen'],
+    columns: [
+      { data: 0, type: 'numeric', width: 40 },
+      { data: 1, type: 'text', width: 150 },
+      { data: 2, type: 'textarea', width: 300 },
+      { data: 3, type: 'text', width: 150 },
+      { data: 4, type: 'url', width: 200 },
+    ],
+  },
   '3a3': {
     title: 'Integrasi Kegiatan Penelitian/PkM dalam Pembelajaran',
     startRow: 13,
     startCol: 2,
+    keys: ['no', 'nama_dosen', 'judul_penelitian_pkm', 'mata_kuliah', 'bentuk_integrasi', 'tahun_ts_minus2', 'tahun_ts_minus1', 'tahun_ts', 'kesesuaian_roadmap', 'bukti_sahih', 'kesesuaian_rps'],
+    columnLabels: ['No.', 'Nama Dosen', 'Judul', 'MK', 'Bentuk', 'TS-2', 'TS-1', 'TS', 'Sesuai Roadmap', 'Bukti', 'Kesesuaian RPS'],
     columns: [
       { data: 0, type: 'numeric', width: 40 },
       { data: 1, type: 'text', width: 200 },
@@ -86,6 +108,8 @@ export const tableConfigs: Record<string, TableConfig> = {
     title: 'Kerjasama Pendidikan',
     startRow: 13,
     startCol: 2,
+    keys: ['no', 'lembaga_mitra', 'tingkat_internasional', 'tingkat_nasional', 'tingkat_lokal', 'judul_kerjasama', 'manfaat', 'tgl_awal', 'tgl_akhir', 'durasi', 'status_kerjasama', 'bukti_kerjasama'],
+    columnLabels: ['No.', 'Lembaga Mitra', 'Internasional', 'Nasional', 'Lokal/Wilayah', 'Judul Kegiatan', 'Manfaat', 'Tgl Awal', 'Tgl Akhir', 'Durasi', 'Status', 'Bukti'],
     columns: [
       { data: 0, type: 'numeric', width: 40 }, // No.
       { data: 1, type: 'text', width: 200 },  // Lembaga Mitra
@@ -120,6 +144,8 @@ export const tableConfigs: Record<string, TableConfig> = {
     title: 'Kurikulum dan Rencana Pembelajaran',
     startRow: 10,
     startCol: 2,
+    keys: ['no', 'semester', 'kode_mk', 'nama_mk', 'mk_kompetensi', 'sks_kuliah', 'sks_seminar', 'sks_praktikum', 'dok_rps', 'unit_penyelenggara'],
+    columnLabels: ['No.', 'Semester', 'Kode MK', 'Nama MK', 'Kompetensi', 'SKS Kuliah', 'SKS Seminar', 'SKS Praktikum', 'RPS', 'Unit'],
     columns: [
       { data: 0, type: 'numeric' },
       { data: 1, type: 'text' },
@@ -129,9 +155,8 @@ export const tableConfigs: Record<string, TableConfig> = {
       { data: 5, type: 'numeric' },
       { data: 6, type: 'numeric' },
       { data: 7, type: 'numeric' },
-      { data: 8, type: 'numeric' },
+      { data: 8, type: 'text' },
       { data: 9, type: 'text' },
-      { data: 10, type: 'text' },
     ],
     nestedHeaders: [
       [

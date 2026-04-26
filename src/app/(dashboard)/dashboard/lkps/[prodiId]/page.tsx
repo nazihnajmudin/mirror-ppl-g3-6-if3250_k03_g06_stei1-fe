@@ -298,18 +298,32 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
                 </p>
                 
                 <div className="flex flex-col gap-3 items-center">
-                  <Button 
-                    onClick={() => {
-                      const url = `/dashboard/lkps/${prodiId}/report${activeVersionId ? `?versionId=${activeVersionId}` : ''}`;
-                      router.push(url);
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
-                  >
-                    <FileSpreadsheet className="w-6 h-6" />
-                    Buka Mirror Excel (Data Entry)
-                  </Button>
+                  <div className="flex gap-3 flex-wrap justify-center">
+                    <Button 
+                      onClick={() => {
+                        if (activeVersionId) {
+                          router.push(`/dashboard/lkps/${prodiId}/form?documentId=${activeVersionId}`);
+                        }
+                      }}
+                      disabled={!activeVersionId}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <FileSpreadsheet className="w-6 h-6" />
+                      Isi Form LKPS
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        const url = `/dashboard/lkps/${prodiId}/report${activeVersionId ? `?versionId=${activeVersionId}` : ''}`;
+                        router.push(url);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <FileSpreadsheet className="w-6 h-6" />
+                      Mirror Excel
+                    </Button>
+                  </div>
                   <p className="text-[11px] text-gray-400">
-                    * Mirror ini memungkinkan Anda mengisi data langsung di browser dan mengekspornya ke template standar.
+                    * Form LKPS untuk entri data terstruktur, atau Mirror Excel untuk tampilan spreadsheet tradisional.
                   </p>
                 </div>
 

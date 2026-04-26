@@ -18,6 +18,14 @@ export default function SimpleGrid({ data, config, onDataChange }: SimpleGridPro
     onDataChange(newData);
   };
 
+  // Get correct column count from config
+  const colCount = config.columnLabels?.length || config.columns?.length || 10;
+  
+  console.log('[SimpleGrid] Config:', config);
+  console.log('[SimpleGrid] columnLabels:', config.columnLabels);
+  console.log('[SimpleGrid] colCount:', colCount);
+  console.log('[SimpleGrid] data length:', data.length, 'first row:', data[0]);
+
   // Helper to render nested headers if they exist
   const renderHeaders = () => {
     if (config.nestedHeaders && config.nestedHeaders.length > 0) {
@@ -42,12 +50,16 @@ export default function SimpleGrid({ data, config, onDataChange }: SimpleGridPro
       ));
     }
 
-    // Default headers if no nested headers
+    // Use columnLabels if available, otherwise fallback to generic labels
+    const labels = config.columnLabels && config.columnLabels.length > 0 
+      ? config.columnLabels 
+      : Array.from({ length: config.columns?.length || 10 }).map((_, i) => `Kolom ${i + 1}`);
+    
     return (
       <TableRow className="bg-gray-50/50">
-        {Array.from({ length: config.columns?.length || 10 }).map((_, i) => (
-          <TableHead key={i} className="border border-gray-200 font-bold text-gray-700">
-            Kolom {i + 1}
+        {labels.map((label: string, i: number) => (
+          <TableHead key={i} className="border border-gray-200 font-bold text-gray-700 text-sm py-2 px-3">
+            {label}
           </TableHead>
         ))}
       </TableRow>
@@ -63,7 +75,7 @@ export default function SimpleGrid({ data, config, onDataChange }: SimpleGridPro
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={config.columns?.length || 10} className="text-center py-10 text-gray-400 italic">
+              <TableCell colSpan={colCount} className="text-center py-10 text-gray-400 italic">
                 Tidak ada data. Klik "Tambah Baris" untuk memulai.
               </TableCell>
             </TableRow>
@@ -73,7 +85,7 @@ export default function SimpleGrid({ data, config, onDataChange }: SimpleGridPro
                 <TableCell className="bg-gray-50/50 border border-gray-200 text-center font-medium text-gray-500 text-xs w-10 sticky left-0 z-10">
                   {rowIndex + 1}
                 </TableCell>
-                {Array.from({ length: config.columns?.length || 10 }).map((_, colIndex) => (
+                {Array.from({ length: colCount }).map((_, colIndex) => (
                   <TableCell key={colIndex} className="p-0 border border-gray-100 min-w-[150px]">
                     <Input
                       value={row[colIndex] || ''}

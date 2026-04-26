@@ -23,10 +23,67 @@ function AccreditationReportContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [backendConfigs, setBackendConfigs] = useState<Record<string, any>>({}); // Cache backend configs
   const { data, setData, resetData, updateSheetData } = useReportStore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const versionId = searchParams.get('versionId');
+
+  // Merge frontend tableConfigs with dynamic backend configs
+  const getMergedConfig = (sheetName: string) => {
+    const frontendConfig = getTableConfig(sheetName);
+    const backendConfig = backendConfigs[sheetName];
+    
+    if (backendConfig && backendConfig.columns) {
+      // Extract columnLabels from backend columns
+      const columnLabels = backendConfig.columns.map((col: any) => col.label || col.key);
+      return {
+        ...frontendConfig,
+        columnLabels,
+        columns: backendConfig.columns,
+      };
+    }
+    
+    return frontendConfig;
+  };
+
+      const loadSheetConfig = async (sheetName: string) => {
+        const cachedConfig = backendConfigs[sheetName];
+        if (cachedConfig) {
+          return cachedConfig;
+        }
+
+        const res = await apiClient.get(`/lkps/config/${sheetName}`);
+        const config = res.data.data;
+        setBackendConfigs((current) => ({
+          ...current,
+          [sheetName]: config,
+        }));
+        return config;
+      };
+
+  // Convert object-based data to array-based format
+      const convertToArrayFormat = (sheetData: any[], sheetConfig: any): any[] => {
+    if (!Array.isArray(sheetData) || sheetData.length === 0) return [];
+    
+    // Check if data is already in array format or object format
+    if (Array.isArray(sheetData[0])) {
+      return sheetData; // Already array format
+    }
+    
+    // Convert object format to array format using keys mapping
+    return sheetData.map(row => {
+      if (typeof row !== 'object' || row === null) return [];
+      
+      // Use keys mapping if available in config
+      if (sheetConfig?.columns?.length > 0) {
+        return sheetConfig.columns.map((column: any) => row[column.key] ?? '');
+      }
+      
+      // If no config exists, extract keys from object order as a last resort
+      return Object.keys(row).map((key) => row[key] ?? '');
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,8 +96,36 @@ function AccreditationReportContent() {
         const docContent = res.data.data.content;
 
         if (docContent && typeof docContent === 'object') {
-          setData(docContent);
-          const firstSheetWithData = SHEETS.find(s => Array.isArray(docContent[s]) && docContent[s].length > 0);
+          const sheetConfigs = await Promise.all(
+            SHEETS.map(async (sheetName) => {
+              try {
+                const config = await loadSheetConfig(sheetName);
+                return [sheetName, config] as const;
+              } catch {
+                return [sheetName, null] as const;
+              }
+            })
+          );
+
+          const configMap = Object.fromEntries(
+            sheetConfigs.filter((entry): entry is readonly [string, any] => Boolean(entry[1]))
+          );
+
+          setBackendConfigs((current) => ({ ...current, ...configMap }));
+
+          // Convert all sheets to array format
+          const convertedData: Record<string, any[]> = {};
+          for (const sheet of SHEETS) {
+            if (Array.isArray(docContent[sheet])) {
+              const converted = convertToArrayFormat(
+                docContent[sheet],
+                configMap[sheet] || backendConfigs[sheet] || getTableConfig(sheet)
+              );
+              convertedData[sheet] = converted;
+            }
+          }
+          setData(convertedData);
+          const firstSheetWithData = SHEETS.find(s => Array.isArray(convertedData[s]) && convertedData[s].length > 0);
           if (firstSheetWithData) {
              setActiveSheet(firstSheetWithData);
           }
@@ -58,6 +143,19 @@ function AccreditationReportContent() {
     
     fetchData();
   }, [versionId, setData]);
+
+  useEffect(() => {
+    const ensureActiveSheetConfig = async () => {
+      if (!versionId) return;
+      try {
+        await loadSheetConfig(activeSheet);
+      } catch {
+        // Keep frontend fallback if backend config is unavailable.
+      }
+    };
+
+    ensureActiveSheetConfig();
+  }, [activeSheet, versionId]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -87,7 +185,7 @@ function AccreditationReportContent() {
 
   const addRow = () => {
     const currentData = data[activeSheet] || [];
-    const config = getTableConfig(activeSheet);
+    const config = getMergedConfig(activeSheet);
     const newRow = Array(config.columns.length).fill('');
     updateSheetData(activeSheet, [...currentData, newRow]);
   };
@@ -146,7 +244,7 @@ function AccreditationReportContent() {
         <main className="flex-1 p-6 overflow-hidden flex flex-col bg-white">
           <div className="flex items-center justify-between mb-4 shrink-0">
              <h2 className="text-lg font-bold text-gray-800">
-               {getTableConfig(activeSheet).title}
+               {getMergedConfig(activeSheet).title}
              </h2>
              <div className="flex gap-2">
                <button onClick={addRow} className="flex items-center px-3 py-1.5 text-xs font-bold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-all border border-gray-200">
@@ -179,7 +277,7 @@ function AccreditationReportContent() {
             <SimpleGrid 
               key={`${activeSheet}-${versionId}`} 
               data={data[activeSheet] || []}
-              config={getTableConfig(activeSheet)}
+              config={getMergedConfig(activeSheet)}
               onDataChange={(newData) => {
                 updateSheetData(activeSheet, newData);
               }}
