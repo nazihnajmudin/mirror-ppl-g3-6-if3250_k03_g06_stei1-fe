@@ -39,13 +39,14 @@ export function SidebarProdi() {
         { name: 'Profil Program Studi', href: '/profil-prodi', icon: User },
         { name: 'Data LKPS', href: '/dashboard/lkps', icon: FileSpreadsheet },
         { name: 'Dokumen LED', href: '/led', icon: FileText }, 
-        { name: 'Dokumen Eviden', href: '#', icon: FolderOpen },
+        { name: 'Dokumen Eviden', href: '/eviden', icon: FolderOpen },
         { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
         { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },
         { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
         { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
         { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users, roleRequired: ['SUPER_ADMIN', 'PIMPINAN'] },
         { name: 'Pengaturan', href: '#', icon: Settings },
+        { name: 'Template Dokumen', href: '/template-dokumen', icon: FileText },
     ];
 
     const handleLogout = async () => {
@@ -69,6 +70,18 @@ export function SidebarProdi() {
         if (!user) return false;
         return (item.roleRequired as string[]).includes(user.role);
     });
+
+    const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        const hasUnsavedChanges = sessionStorage.getItem('unsavedChanges') === 'true';
+        if (hasUnsavedChanges) {
+            const confirmLeave = window.confirm("Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman ini?");
+            if (!confirmLeave) {
+                e.preventDefault(); // Batalkan navigasi
+            } else {
+                sessionStorage.removeItem('unsavedChanges'); // Bersihkan flag jika user setuju pergi
+            }
+        }
+    };
 
     return (
         <div className="flex h-screen w-64 flex-col border-r bg-gray-50/40 px-4 py-6 overflow-y-auto">

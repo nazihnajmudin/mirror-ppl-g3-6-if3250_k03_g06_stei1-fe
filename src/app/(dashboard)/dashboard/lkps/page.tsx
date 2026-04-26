@@ -69,15 +69,15 @@ export default function LKPSSelectorPage() {
   return (
     <div className="space-y-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Manajemen LKPS Institusi</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Dokumen LKPS Institusi</h1>
         <p className="text-sm text-gray-500 mt-1">
           {user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN' 
-            ? "Pilih Program Studi untuk meninjau dokumen LKPS."
-            : "Pilih Program Studi penugasan Anda untuk mengelola dokumen LKPS."}
+            ? "Pilih Program Studi untuk meninjau dokumen Laporan Kinerja Program Studi."
+            : "Pilih Program Studi penugasan Anda untuk mengelola dokumen Laporan Kinerja Program Studi."}
         </p>
       </header>
 
-      <div className="relative max-w-md">
+      {/* <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input 
           placeholder="Cari Program Studi..." 
@@ -85,7 +85,7 @@ export default function LKPSSelectorPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-      </div>
+      </div> */}
 
       <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <Table>
