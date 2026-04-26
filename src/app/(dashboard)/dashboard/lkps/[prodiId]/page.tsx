@@ -292,13 +292,44 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
                   <FileSpreadsheet className="w-10 h-10 text-blue-400" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">Pratinjau Dinonaktifkan</h3>
-                <p className="text-gray-500 max-w-md text-sm">
+                <p className="text-gray-500 max-w-md text-sm mb-6">
                   Untuk menjaga integritas data dan performa, pratinjau tabel dinonaktifkan. 
-                  Silakan klik tombol <b>Unduh</b> untuk melihat isi lengkap file Excel.
+                  Silakan klik tombol <b>Unduh</b> untuk melihat isi file, atau gunakan <b>Mirror Excel</b> untuk entri data langsung.
                 </p>
+                
+                <div className="flex flex-col gap-3 items-center">
+                  <div className="flex gap-3 flex-wrap justify-center">
+                    <Button 
+                      onClick={() => {
+                        if (activeVersionId) {
+                          router.push(`/dashboard/lkps/${prodiId}/form?documentId=${activeVersionId}`);
+                        }
+                      }}
+                      disabled={!activeVersionId}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <FileSpreadsheet className="w-6 h-6" />
+                      Isi Form LKPS
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        const url = `/dashboard/lkps/${prodiId}/report${activeVersionId ? `?versionId=${activeVersionId}` : ''}`;
+                        router.push(url);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <FileSpreadsheet className="w-6 h-6" />
+                      Mirror Excel
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    * Form LKPS untuk entri data terstruktur, atau Mirror Excel untuk tampilan spreadsheet tradisional.
+                  </p>
+                </div>
+
                 {versions.length === 0 && !loading && (
                     <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100 text-blue-700 text-sm max-w-sm">
-                        Belum ada dokumen LKPS yang diunggah for periode {activePeriode}.
+                        Belum ada dokumen LKPS yang diunggah untuk periode {activePeriode}.
                     </div>
                 )}
             </CardContent>
