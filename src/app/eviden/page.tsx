@@ -47,9 +47,6 @@ export default function EvidenListPage() {
     const urlProdiId = searchParams.get("prodiId");
     const { user, loading } = useUser();
     
-    // ==========================================
-    // 1. ALL HOOKS
-    // ==========================================
     const [evidenList, setEvidenList] = useState<any[]>([]);
     const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
     const [isFetching, setIsFetching] = useState(true);
@@ -84,7 +81,6 @@ export default function EvidenListPage() {
         if (user) fetchInitialData();
     }, [user]);
 
-    // Pre-kalkulasi variabel dasar untuk useMemo
     const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
     const showProdiColumn = isAdmin || user?.role === 'TIM_PRODI';
 
@@ -93,7 +89,6 @@ export default function EvidenListPage() {
     
     const baseEvidenData = isAdmin ? evidenList : evidenList.filter(e => e.prodiId === activeProdiId);
 
-    // HOOK USEMEMO
     const processedEviden = useMemo(() => {
         let result = [...baseEvidenData];
 
@@ -140,9 +135,6 @@ export default function EvidenListPage() {
         return result;
     }, [baseEvidenData, searchQuery, filters, sortConfig]);
 
-    // ==========================================
-    // 2. EARLY RETURNS
-    // ==========================================
     if (loading) return <div className="p-8 text-gray-500 flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin" /> Memuat...</div>;
     if (!user) return null;
 
@@ -169,9 +161,6 @@ export default function EvidenListPage() {
         );
     }
 
-    // ==========================================
-    // 3. RENDER UTAMA
-    // ==========================================
     const toggleFilterArray = (key: 'prodi' | 'periode' | 'indikator', value: string, checked: boolean) => {
         setFilters(prev => ({
             ...prev,
@@ -217,7 +206,8 @@ export default function EvidenListPage() {
     }
 
     const handleAction = (mode: 'view' | 'edit' | 'add', id?: string) => {
-        router.push(`/eviden/form?mode=${mode}${id ? `&id=${id}` : ''}${activeProdiId ? `&prodiId=${activeProdiId}` : ''}`);
+        const queryProdi = activeProdiId && mode === 'add' ? `&prodiId=${activeProdiId}` : '';
+        router.push(`/eviden/form?mode=${mode}${id ? `&id=${id}` : ''}${queryProdi}`);
     };
 
     const handleDelete = async (id: string) => {
