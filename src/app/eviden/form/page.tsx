@@ -69,16 +69,17 @@ export default function EvidenFormPage() {
     
     const mode = searchParams.get('mode') as 'add' | 'edit' | 'view' || 'view';
     const evidenId = searchParams.get('id');
-    const urlProdiId = searchParams.get('prodiId'); // Didapat dari navigasi sebelumnya
+    const urlProdiId = searchParams.get('prodiId');
     const isViewOnly = mode === 'view' || user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
 
+    const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
     const [activeProdi, setActiveProdi] = useState<any>(null);
     const [isProdiLoading, setIsProdiLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
     const [formData, setFormData] = useState({
-        prodiId: urlProdiId || "",
+        prodiId: "",
         judul: "",
         deskripsi: "",
         indikator: [] as string[],
@@ -101,17 +102,19 @@ export default function EvidenFormPage() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, []);
 
-    // FETCH PRODI & MENENTUKAN PRODI AKTIF
+    // 1. FETCH PRODI & MENENTUKAN PRODI AKTIF (HANYA UNTUK ADD MODE)
     useEffect(() => {
         const fetchProdi = async () => {
             if (!user) return;
             try {
                 const res = await apiClient.get('/prodi/my-prodi');
                 const prodis = res.data.data || [];
-                const prodi = prodis.find((p: any) => p.id === urlProdiId) || prodis[0]; // Fallback ke prodi pertama jika url tidak ada
-                if (prodi) {
-                    setActiveProdi(prodi);
-                    if (mode === 'add') {
+                setAccessibleProdis(prodis);
+                
+                if (mode === 'add') {
+                    const prodi = prodis.find((p: any) => p.id === urlProdiId) || prodis[0];
+                    if (prodi) {
+                        setActiveProdi(prodi);
                         setFormData(prev => ({ ...prev, prodiId: prodi.id }));
                     }
                 }
@@ -124,7 +127,7 @@ export default function EvidenFormPage() {
         fetchProdi();
     }, [user, urlProdiId, mode]);
 
-    // FETCH DETAIL JIKA MODE EDIT/VIEW
+    // 2. FETCH DETAIL JIKA MODE EDIT/VIEW
     useEffect(() => {
         const fetchDetail = async () => {
             if (!evidenId) return;
@@ -159,6 +162,16 @@ export default function EvidenFormPage() {
         };
         if (mode !== 'add') fetchDetail();
     }, [evidenId, mode, router]);
+
+    // 3. SYNC ACTIVE PRODI UNTUK MODE EDIT/VIEW (Mencocokkan data backend dengan list prodi di frontend)
+    useEffect(() => {
+        if (mode !== 'add' && formData.prodiId && accessibleProdis.length > 0) {
+            const matchedProdi = accessibleProdis.find(p => p.id === formData.prodiId);
+            if (matchedProdi) {
+                setActiveProdi(matchedProdi);
+            }
+        }
+    }, [formData.prodiId, accessibleProdis, mode]);
 
     const markAsUnsaved = () => {
         if (!isViewOnly) sessionStorage.setItem('unsavedChanges', 'true');
@@ -236,7 +249,8 @@ export default function EvidenFormPage() {
 
             sessionStorage.removeItem('unsavedChanges');
             alert("Eviden berhasil disimpan!");
-            router.push(urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
+            
+            router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         } catch (error: any) {
             alert(error?.response?.data?.message || "Terjadi kesalahan saat menyimpan eviden.");
         } finally {
@@ -245,7 +259,7 @@ export default function EvidenFormPage() {
     };
 
     const handleCancel = () => {
-        const goBack = () => router.push(urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
+        const goBack = () => router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         if (sessionStorage.getItem('unsavedChanges') === 'true') {
             if (window.confirm("Perubahan belum disimpan. Yakin ingin membatalkan?")) {
                 sessionStorage.removeItem('unsavedChanges');
@@ -259,7 +273,6 @@ export default function EvidenFormPage() {
     if (userLoading || isProdiLoading || isFetchingDetail) return <div className="p-8 text-gray-500 font-medium flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin"/> Memuat form eviden...</div>;
     if (!user) return null;
 
-    // Menentukan Kriteria Berdasarkan Prodi Aktif
     const kriteriaList = isInfokom(activeProdi?.abbreviation) ? KRITERIA_LAM_INFOKOM : KRITERIA_LAM_TEKNIK;
 
     return (
@@ -275,7 +288,7 @@ export default function EvidenFormPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     {isViewOnly && user.role !== 'SUPER_ADMIN' && user.role !== 'PIMPINAN' ? (
-                        <Button onClick={() => router.push(`/eviden/form?mode=edit&id=${evidenId}${urlProdiId ? `&prodiId=${urlProdiId}` : ''}`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
+                        <Button onClick={() => router.push(`/eviden/form?mode=edit&id=${evidenId}`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
                             <Edit className="w-4 h-4" /> Mulai Edit
                         </Button>
                     ) : !isViewOnly ? (
