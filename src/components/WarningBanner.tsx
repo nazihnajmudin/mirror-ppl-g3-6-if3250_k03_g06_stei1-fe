@@ -39,6 +39,19 @@ export function WarningBanner() {
 
   const alert = activeAlerts[0] // Tampilkan yang paling baru/kritis
 
+  const handleViewAlert = async (alert: Notification) => {
+    try {
+      if (!alert.isRead) {
+        await apiClient.patch(`/notifications/${alert.id}/read`)
+      }
+      if (alert.targetUrl) {
+        router.push(alert.targetUrl)
+      }
+    } catch (error) {
+      console.error('Gagal memproses alert:', error)
+    }
+  }
+
   return (
     <div className={cn(
       "relative w-full px-6 py-3 flex items-center justify-between gap-4 transition-all animate-in fade-in slide-in-from-top-4 duration-500",
@@ -59,7 +72,7 @@ export function WarningBanner() {
       <div className="flex items-center gap-2">
         {alert.targetUrl && (
           <button 
-            onClick={() => router.push(alert.targetUrl!)}
+            onClick={() => handleViewAlert(alert)}
             className="flex items-center gap-1 text-[10px] font-bold bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors whitespace-nowrap"
           >
             LIHAT <ArrowRight className="w-3 h-3" />
