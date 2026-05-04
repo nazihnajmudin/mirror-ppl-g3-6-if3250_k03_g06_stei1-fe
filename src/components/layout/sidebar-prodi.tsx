@@ -45,7 +45,7 @@ export function SidebarProdi() {
         { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
         { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
         { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users, roleRequired: ['SUPER_ADMIN', 'PIMPINAN'] },
-        { name: 'Pengaturan', href: '#', icon: Settings },
+        { name: 'Pengaturan', href: '/settings', icon: Settings, roleRequired: ['SUPER_ADMIN'] },
         { name: 'Template Dokumen', href: '/template-dokumen', icon: FileText },
     ];
 

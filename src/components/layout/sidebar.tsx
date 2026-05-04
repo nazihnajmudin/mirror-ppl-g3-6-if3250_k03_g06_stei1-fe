@@ -203,10 +203,12 @@ export function Sidebar() {
 
                 {/* 4. SHARED BOTTOM ITEMS */}
                 <div className="mt-auto pt-4 space-y-1">
-                    <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
-                        <Settings className="h-4 w-4" />
-                        Pengaturan
-                    </Link>
+                    {user?.role === 'SUPER_ADMIN' && (
+                        <Link href="/settings" className={cn(globalItemClass, pathname === '/settings' ? activeGlobalClass : inactiveGlobalClass)}>
+                            <Settings className="h-4 w-4" />
+                            Pengaturan
+                        </Link>
+                    )}
                     <button 
                         onClick={handleLogout}
                         disabled={isLoggingOut}

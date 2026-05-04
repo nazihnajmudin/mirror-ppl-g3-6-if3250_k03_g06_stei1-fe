@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
 import { getCurrentUser } from "@/lib/api-prodi"
+import { NotificationBell } from "@/components/NotificationBell"
 import type { ApiResponse, CurrentUser, DashboardData } from "@/types/api.types"
 
 export default function DashboardProdiPage() {
@@ -252,7 +253,7 @@ export default function DashboardProdiPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Bell className="w-5 h-5 text-gray-500" />
+            <NotificationBell />
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
                 {currentUser?.name?.charAt(0)?.toUpperCase() ?? "?"}
@@ -458,7 +459,7 @@ export default function DashboardProdiPage() {
               <span className="text-xs text-gray-600">Read Only</span>
             </div>
           )}
-          <Bell className="w-5 h-5 text-gray-500" />
+          <NotificationBell />
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
               {currentUser?.name?.charAt(0)?.toUpperCase() ?? "?"}
@@ -483,6 +484,11 @@ export default function DashboardProdiPage() {
               <p className={`text-2xl font-bold ${getAccreditationColor(dashboard.accreditation.grade)}`}>
                 {dashboard.accreditation.grade || "Belum"}
               </p>
+              {dashboard.accreditation.endDate && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Berlaku s.d. {new Date(dashboard.accreditation.endDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+              )}
             </div>
           </div>
 
