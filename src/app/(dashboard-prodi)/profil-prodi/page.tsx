@@ -45,6 +45,8 @@ import {
   addProdiMember,
   getProdiMembers,
   getPenugasan,
+  downloadCertificate,
+  isLocalCertificate,
 } from "@/lib/api-prodi"
 import apiClient from "@/lib/api-client"
 import { useUser } from "@/hooks/useUser"
@@ -268,8 +270,11 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
   const handleSimpanProfil = async () => {
     try {
       await updateProdi(targetProdiId, { fullname: editForm.fullname, degree: editForm.degree })
-      if (editForm.akreditasi || editForm.certificateUrl) {
-        await upsertAccreditation(targetProdiId, { grade: editForm.akreditasi, certificateUrl: editForm.certificateUrl })
+      if (editForm.akreditasi || (editForm.certificateUrl && !isLocalCertificate(editForm.certificateUrl))) {
+        await upsertAccreditation(targetProdiId, {
+          grade: editForm.akreditasi,
+          certificateUrl: isLocalCertificate(editForm.certificateUrl) ? undefined : editForm.certificateUrl,
+        })
       }
       setProdiData({
         ...editForm,
@@ -581,11 +586,24 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">URL Sertifikat</p>
-                    {isEditing ? (
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">Sertifikat</p>
+                    {isLocalCertificate(prodiData.certificateUrl) ? (
+                      <button
+                        onClick={() => downloadCertificate(targetProdiId)}
+                        className="text-sm text-blue-600 hover:underline font-medium flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Unduh Sertifikat
+                      </button>
+                    ) : isEditing ? (
                       <Input value={editForm.certificateUrl} onChange={(e) => setEditForm((f) => ({ ...f, certificateUrl: e.target.value }))} className="rounded-lg border-gray-200 text-sm h-9" placeholder="https://..." />
+                    ) : prodiData.certificateUrl ? (
+                      <a href={prodiData.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline font-medium flex items-center gap-1">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Buka Sertifikat
+                      </a>
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">{prodiData.certificateUrl || "—"}</p>
+                      <p className="text-sm font-semibold text-gray-900">—</p>
                     )}
                   </div>
                 </div>
@@ -693,15 +711,25 @@ function ProdiDetailView({ targetProdiId, canEdit }: { targetProdiId: string, ca
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 flex flex-col items-center justify-center py-12 gap-3">
               <p className="text-sm text-gray-500">Sertifikat akreditasi tersedia di tautan berikut:</p>
-              <a
-                href={prodiData.certificateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
-              >
-                Buka Sertifikat
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              {isLocalCertificate(prodiData.certificateUrl) ? (
+                <button
+                  onClick={() => downloadCertificate(targetProdiId)}
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                >
+                  Unduh Sertifikat
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <a
+                  href={prodiData.certificateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                >
+                  Buka Sertifikat
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
             </div>
           </div>
         </DialogContent>
