@@ -10,7 +10,9 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TextAlign from "@tiptap/extension-text-align";
 import UnderlineExtension from "@tiptap/extension-underline";
-import {Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Heading1, Heading2, Save, CheckCircle2, Clock, ArrowLeft, FileText, ChevronDown, ChevronRight, Download, History, Undo2, Redo2, Plus, Minus, Trash2} from "lucide-react";
+import ImageResize from "tiptap-extension-resize-image";
+import Link from "@tiptap/extension-link";
+import {Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Heading1, Heading2, Save, CheckCircle2, Clock, ArrowLeft, FileText, ChevronDown, ChevronRight, Download, History, Undo2, Redo2, Plus, Minus, Trash2, ImageIcon, Link as LinkIcon, Unlink} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
@@ -505,7 +507,7 @@ const SIDEBAR_GROUPS = (() => {
 const EMPTY_CONTENT = ["", "<p></p>"];
 const hasContent = (html: string) => !EMPTY_CONTENT.includes((html ?? "").trim());
 
-function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+function EditorToolbar({ editor, onUploadImage }: { editor: ReturnType<typeof useEditor> | null; onUploadImage: () => void }) {
   if (!editor) return null;
   const btn = (active: boolean, disabled = false) =>
     cn("p-1.5 rounded text-gray-600 hover:bg-gray-200 transition-colors",
@@ -514,34 +516,39 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null
   const prevent = (e: React.MouseEvent) => e.preventDefault();
   const sep = <div className="w-px h-5 bg-gray-300 mx-1" />;
   const isInTable = editor.isActive("table");
+  const isLink = editor.isActive("link");
+
+  const handleSetLink = () => {
+    const prev = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Masukkan URL:", prev ?? "https://");
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+    editor.chain().focus().setLink({ href: url, target: "_blank" }).run();
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-gray-200 bg-gray-50/50 shrink-0">
-      {/* Undo / Redo */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className={btn(false, !editor.can().undo())} title="Undo"><Undo2 className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className={btn(false, !editor.can().redo())} title="Redo"><Redo2 className="w-4 h-4" /></button>
       {sep}
-      {/* Headings */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={btn(editor.isActive("heading", { level: 1 }))} title="Heading 1"><Heading1 className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={btn(editor.isActive("heading", { level: 2 }))} title="Heading 2"><Heading2 className="w-4 h-4" /></button>
       {sep}
-      {/* Inline formatting */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleBold().run()} className={btn(editor.isActive("bold"))} title="Bold"><Bold className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleItalic().run()} className={btn(editor.isActive("italic"))} title="Italic"><Italic className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleUnderline().run()} className={btn(editor.isActive("underline"))} title="Underline"><UnderlineIcon className="w-4 h-4" /></button>
       {sep}
-      {/* Lists */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleBulletList().run()} className={btn(editor.isActive("bulletList"))} title="Bullet List"><List className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive("orderedList"))} title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
       {sep}
-      {/* Alignment */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("left").run()} className={btn(editor.isActive({ textAlign: "left" }))} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("center").run()} className={btn(editor.isActive({ textAlign: "center" }))} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("right").run()} className={btn(editor.isActive({ textAlign: "right" }))} title="Align Right"><AlignRight className="w-4 h-4" /></button>
       {sep}
-      {/* Insert table */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className={btn(false)} title="Sisipkan Tabel"><TableIcon className="w-4 h-4" /></button>
-      {/* Table operations — hanya muncul saat kursor di dalam tabel */}
       {isInTable && (<>
         {sep}
         <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().addRowBefore().run()} className={btn(false)} title="Tambah baris di atas"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Plus className="w-3 h-3" />Baris↑</span></button>
@@ -554,6 +561,13 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null
         {sep}
         <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().deleteTable().run()} className={cn(btn(false), "text-red-500 hover:bg-red-50")} title="Hapus tabel"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Trash2 className="w-3 h-3" />Tabel</span></button>
       </>)}
+      {sep}
+      <button type="button" onMouseDown={prevent} onClick={handleSetLink} className={btn(isLink)} title={isLink ? "Edit link" : "Sisipkan link"}><LinkIcon className="w-4 h-4" /></button>
+      {isLink && (
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().unsetLink().run()} className={btn(false)} title="Hapus link"><Unlink className="w-4 h-4" /></button>
+      )}
+      {sep}
+      <button type="button" onMouseDown={prevent} onClick={(e) => { e.preventDefault(); onUploadImage(); }} className={btn(false)} title="Upload Foto"><ImageIcon className="w-4 h-4" /></button>
     </div>
   );
 }
@@ -595,6 +609,8 @@ function LEDFormContent() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSaveRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const activeSection = ALL_SECTIONS.find((s) => s.key === activeKey) ?? ALL_SECTIONS[0];
   const activeSectionIndex = ALL_SECTIONS.findIndex((s) => s.key === activeKey);
@@ -653,6 +669,8 @@ function LEDFormContent() {
       Table.configure({ resizable: true }),
       TableRow, TableCell, TableHeader,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      ImageResize,
+      Link.configure({ openOnClick: false, HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" } }),
     ],
     content: content[activeKey] ?? "",
     immediatelyRender: false,
@@ -727,6 +745,26 @@ function LEDFormContent() {
 
   useEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
   useEffect(() => () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); }, []);
+
+  const handleUploadImage = useCallback(async (file: File) => {
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await apiClient.post("/led/upload/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const url: string = res.data.data?.url;
+      if (url && editor) {
+        editor.chain().focus().setImage({ src: url }).run();
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Upload Gagal", description: "Gagal mengunggah gambar. Coba lagi." });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, [editor, toast]);
 
   const handleExport = useCallback(async () => {
     if (!prodiId) return;
@@ -1005,7 +1043,7 @@ function LEDFormContent() {
           </nav>
         </aside>
 
-        <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        <main className="flex-1 flex flex-col overflow-hidden bg-white relative">
           <div className="px-6 py-2.5 border-b border-gray-100 shrink-0 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-500">{activeGroup?.label}</span>
             {!activeGroup?.isCriteria || activeGroup.sections.length > 1 ? (
@@ -1017,7 +1055,24 @@ function LEDFormContent() {
             {!canEdit && <span className="text-xs text-amber-600 ml-2">(read-only)</span>}
           </div>
 
-          {canEdit && <EditorToolbar editor={editor} />}
+          {canEdit && <EditorToolbar editor={editor} onUploadImage={() => imageInputRef.current?.click()} />}
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUploadImage(file);
+              e.target.value = "";
+            }}
+          />
+          {isUploadingImage && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+              <span className="text-sm text-blue-600 font-medium animate-pulse">Mengunggah gambar...</span>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto p-6 max-w-4xl w-full mx-auto">
             <EditorContent
