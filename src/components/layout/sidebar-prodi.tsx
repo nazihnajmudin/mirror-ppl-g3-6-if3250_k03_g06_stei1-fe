@@ -41,7 +41,7 @@ export function SidebarProdi() {
         { name: 'Dokumen LED', href: '/led', icon: FileText }, 
         { name: 'Dokumen Eviden', href: '/eviden', icon: FolderOpen },
         { name: 'Penugasan Tim Prodi', href: '/penugasan', icon: ClipboardList },
-        { name: 'Simulasi Skor Prodi', href: '#', icon: Calculator },
+        { name: 'Simulasi Skor Prodi', href: user?.prodiId ? `/simulasi-skor-prodi/${user.prodiId}` : '#', icon: Calculator },
         { name: 'Monitoring & Evaluasi', href: '#', icon: Activity },
         { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download },
         { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users, roleRequired: ['SUPER_ADMIN', 'PIMPINAN'] },

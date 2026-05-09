@@ -45,7 +45,7 @@ const navigation = [
     { name: 'LED', href: '/led', icon: FileText},
     { name: 'Data Kuantitatif Institusi', href: '#', icon: Database},
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
-    { name: 'Simulasi Skor Akreditasi', href: '#', icon: Calculator},
+    { name: 'Simulasi Skor Akreditasi', href: '/simulasi-skor', icon: Calculator},
     { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download},
     { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users},
     { name: 'Pengaturan', href: '#', icon: Settings},

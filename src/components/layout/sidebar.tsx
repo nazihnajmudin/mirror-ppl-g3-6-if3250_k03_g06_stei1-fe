@@ -157,7 +157,7 @@ export function Sidebar() {
                             <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'umum' && "rotate-180")} />
                         </button>
                         <div className={cn("overflow-hidden transition-all duration-300", expanded === 'umum' ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
-                            <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
+                            <Link href="/simulasi-skor" className={cn(submenuBaseClass, pathname.startsWith('/simulasi-skor') ? activeSubmenuClass : inactiveSubmenuClass)}>
                                 <Calculator className="h-4 w-4" />
                                 Simulasi Skor Akreditasi
                             </Link>
