@@ -165,6 +165,10 @@ export function Sidebar() {
                                 <Users className="h-4 w-4" />
                                 Manajemen Akun
                             </Link>
+                            <Link href="/data-institusi" className={cn(submenuBaseClass, pathname.startsWith('/data-institusi') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <Database className="h-4 w-4" />
+                                Pusat Data Institusi
+                            </Link>
                         </div>
                     </div>
                 )}
