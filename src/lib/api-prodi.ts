@@ -100,3 +100,44 @@ export const deletePenugasan = async (id: string): Promise<void> => {
     throw new Error(response.data.message);
   }
 };
+
+export interface SimulationIndicator {
+  code: string;
+  name: string;
+  quantitativeScore: number;
+  qualitativeScore: number | null;
+  qualitativeNote?: string | null;
+  totalScore: number;
+  evidenceCount: number;
+  sheetCompletion: number;
+}
+
+export interface SimulationScore {
+  prodiId: string;
+  indicators: SimulationIndicator[];
+  quantitativeScore: number;
+  qualitativeScore: number;
+  totalScore: number;
+  updatedAt: string;
+}
+
+export const getSimulationScore = async (prodiId: string): Promise<SimulationScore> => {
+  const response = await apiClient.get<ApiResponse<SimulationScore>>(`/simulasi-skor/${prodiId}`);
+  if (response.data.status === 'error') {
+    throw new Error(response.data.message);
+  }
+  return response.data.data!;
+};
+
+export const updateSimulationQualitative = async (
+  prodiId: string,
+  qualitativeScores: Array<{ code: string; qualitativeScore: number; qualitativeNote?: string | null }>
+): Promise<SimulationScore> => {
+  const response = await apiClient.put<ApiResponse<SimulationScore>>(`/simulasi-skor/${prodiId}/qualitative`, {
+    qualitativeScores,
+  });
+  if (response.data.status === 'error') {
+    throw new Error(response.data.message);
+  }
+  return response.data.data!;
+};

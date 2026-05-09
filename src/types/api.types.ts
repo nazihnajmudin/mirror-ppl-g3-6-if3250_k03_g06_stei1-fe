@@ -140,3 +140,23 @@ export interface DashboardData {
     isReadOnly: boolean;
   };
 }
+
+export interface SimulationIndicator {
+  code: string;
+  name: string;
+  quantitativeScore: number;
+  qualitativeScore: number | null;
+  qualitativeNote?: string | null;
+  totalScore: number;
+  evidenceCount: number;
+  sheetCompletion: number;
+}
+
+export interface SimulationScore {
+  prodiId: string;
+  indicators: SimulationIndicator[];
+  quantitativeScore: number;
+  qualitativeScore: number;
+  totalScore: number;
+  updatedAt: string;
+}
