@@ -2,14 +2,14 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-    LayoutDashboard, 
-    Database, 
-    Activity, 
-    Calculator, 
-    Download, 
-    Users, 
-    Settings, 
+import {
+    LayoutDashboard,
+    Database,
+    Activity,
+    Calculator,
+    Download,
+    Users,
+    Settings,
     LogOut,
     Loader2,
     FileText,
@@ -19,7 +19,8 @@ import {
     ClipboardList,
     FileSpreadsheet,
     Shield,
-    Layout
+    Layout,
+    Award
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -38,7 +39,7 @@ export function Sidebar() {
 
     // Auto-expand accordions based on current path
     useEffect(() => {
-        const umumPaths = ['/manajemen-akun'];
+        const umumPaths = ['/manajemen-akun', '/dashboard/manajemen-sertifikat'];
         const prodiPaths = ['/profil-prodi', '/penugasan'];
         
         if (umumPaths.some(p => pathname.startsWith(p))) {
@@ -156,7 +157,7 @@ export function Sidebar() {
                             </div>
                             <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'umum' && "rotate-180")} />
                         </button>
-                        <div className={cn("overflow-hidden transition-all duration-300", expanded === 'umum' ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
+                        <div className={cn("overflow-hidden transition-all duration-300", expanded === 'umum' ? "max-h-60 opacity-100 mt-1" : "max-h-0 opacity-0")}>
                             <Link href="#" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
                                 <Calculator className="h-4 w-4" />
                                 Simulasi Skor Akreditasi
@@ -164,6 +165,10 @@ export function Sidebar() {
                             <Link href="/manajemen-akun" className={cn(submenuBaseClass, pathname.startsWith('/manajemen-akun') ? activeSubmenuClass : inactiveSubmenuClass)}>
                                 <Users className="h-4 w-4" />
                                 Manajemen Akun
+                            </Link>
+                            <Link href="/dashboard/manajemen-sertifikat" className={cn(submenuBaseClass, pathname.startsWith('/dashboard/manajemen-sertifikat') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <Award className="h-4 w-4" />
+                                Manajemen Sertifikat
                             </Link>
                         </div>
                     </div>

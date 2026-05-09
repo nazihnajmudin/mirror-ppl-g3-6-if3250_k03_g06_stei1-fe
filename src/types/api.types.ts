@@ -43,6 +43,7 @@ export interface AccreditationInfo {
   startDate?: string;
   endDate?: string;
   certificateUrl?: string;
+  certificateOriginalName?: string;
   createdAt: string;
   updatedAt: string;
 }
