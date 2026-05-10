@@ -39,11 +39,12 @@ export default function InstitusiDashboard() {
             try {
               const dashboardRes = await apiClient.get(`/prodi/${prodi.id}/dashboard`)
               const dashboardData = dashboardRes.data.data
+              const score = dashboardData?.simulationScore || 0
               return {
                 ...prodi,
                 dashboard: dashboardData,
                 status:
-                  dashboardData?.simulationScore >= 300 ? ("completed" as const) : ("in_progress" as const),
+                  score >= 361 ? ("completed" as const) : ("in_progress" as const),
               }
             } catch (err) {
               // If dashboard fetch fails, return prodi without dashboard data
@@ -71,19 +72,22 @@ export default function InstitusiDashboard() {
   const prodiSelesai = prodis.filter((p) => p.status === "completed")
   const prodiProgress = prodis.filter((p) => p.status === "in_progress")
   const totalReady = prodiSelesai.length
-  const totalNeedAttention = prodiProgress.filter((p) => (p.dashboard?.simulationScore || 0) < 150).length
+  const totalNeedAttention = prodiProgress.filter((p) => (p.dashboard?.simulationScore || 0) < 200).length
 
   // Prepare graph data
-  const graphData = prodis.slice(0, 5).map((prodi) => ({
-    name: prodi.abbreviation || prodi.fullname.slice(0, 10),
-    score: prodi.dashboard?.simulationScore || 0,
-    color:
-      (prodi.dashboard?.simulationScore || 0) >= 300
-        ? "bg-[#20c997]"
-        : (prodi.dashboard?.simulationScore || 0) >= 150
-          ? "bg-[#ffd93d]"
-          : "bg-[#ff6b6b]",
-  }))
+  const graphData = prodis.slice(0, 5).map((prodi) => {
+    const score = prodi.dashboard?.simulationScore || 0
+    let color = "bg-[#ff6b6b]" // Perlu Perhatian <200
+    if (score >= 200 && score < 301) color = "bg-[#ffd93d]" // Baik 200-300
+    else if (score >= 301 && score < 361) color = "bg-[#06b6d4]" // Baik Sekali 301-360
+    else if (score >= 361) color = "bg-[#20c997]" // Unggul >=361
+    
+    return {
+      name: prodi.abbreviation || prodi.fullname.slice(0, 10),
+      score,
+      color,
+    }
+  })
 
   const maxScore = Math.max(...graphData.map((d) => d.score), 500)
 
@@ -136,7 +140,7 @@ export default function InstitusiDashboard() {
           </CardHeader>
           <CardContent className="p-6 text-center">
             <div className="text-4xl font-bold text-gray-900">{totalReady}</div>
-            <p className="text-sm text-gray-500 mt-2 font-medium">Skor Simulasi ≥ 300</p>
+            <p className="text-sm text-gray-500 mt-2 font-medium">Skor Simulasi ≥ 361</p>
           </CardContent>
         </Card>
 
@@ -148,7 +152,7 @@ export default function InstitusiDashboard() {
           </CardHeader>
           <CardContent className="p-6 text-center">
             <div className="text-4xl font-bold text-red-600">{totalNeedAttention}</div>
-            <p className="text-sm text-gray-500 mt-2 font-medium">Skor Simulasi &lt; 150</p>
+            <p className="text-sm text-gray-500 mt-2 font-medium">Skor Simulasi &lt; 200</p>
           </CardContent>
         </Card>
       </div>
@@ -161,13 +165,16 @@ export default function InstitusiDashboard() {
           </CardTitle>
           <div className="flex justify-center gap-5 mt-4 text-[13px] text-gray-600 font-medium">
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#ff6b6b] shadow-sm"></span> Kritis (&lt;150)
+              <span className="w-3 h-3 rounded-full bg-[#ff6b6b] shadow-sm"></span> Perlu Perhatian (&lt;200)
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#ffd93d] shadow-sm"></span> Waspada (150-300)
+              <span className="w-3 h-3 rounded-full bg-[#ffd93d] shadow-sm"></span> Baik (200-300)
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#20c997] shadow-sm"></span> Baik (≥300)
+              <span className="w-3 h-3 rounded-full bg-[#06b6d4] shadow-sm"></span> Baik Sekali (301-360)
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#20c997] shadow-sm"></span> Unggul (≥361)
             </span>
           </div>
         </CardHeader>
