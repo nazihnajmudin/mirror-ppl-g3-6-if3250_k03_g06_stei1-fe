@@ -53,7 +53,8 @@ export function NotificationBell() {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const unreadNotifications = notifications.filter(n => !n.isRead)
+  const unreadCount = unreadNotifications.length
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
@@ -104,28 +105,25 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" className="w-80 max-h-[450px] overflow-y-auto">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex items-center justify-between">
-            <span>Notifikasi</span>
+            <span>Notifikasi Baru</span>
             {loading && <span className="text-[10px] text-gray-400 animate-pulse">Memperbarui...</span>}
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        {notifications.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-500">
-            Tidak ada notifikasi
+        {unreadNotifications.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-500 px-4">
+            Tidak ada notifikasi baru
           </div>
         ) : (
-          notifications.map((n) => (
+          unreadNotifications.map((n) => (
             <DropdownMenuItem
               key={n.id}
-              className={cn(
-                "flex flex-col items-start gap-1 p-3 cursor-pointer focus:bg-gray-50",
-                !n.isRead && "bg-blue-50/50 focus:bg-blue-50"
-              )}
+              className="flex flex-col items-start gap-1 p-3 cursor-pointer focus:bg-blue-50/50"
               onClick={() => handleNotificationClick(n)}
             >
               <div className="flex items-center gap-2 w-full">
                 {getIcon(n.type)}
-                <span className={cn("text-xs font-bold flex-1", !n.isRead ? "text-gray-900" : "text-gray-600")}>
+                <span className="text-xs font-bold flex-1 text-gray-900">
                   {n.title}
                 </span>
                 <span className="text-[10px] text-gray-400">
