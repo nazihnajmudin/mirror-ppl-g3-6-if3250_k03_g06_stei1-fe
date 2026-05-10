@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Bell } from "lucide-react"
+import { NotificationBell } from "@/components/NotificationBell"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getCurrentUser } from "@/lib/api-prodi"
 import type { CurrentUser } from "@/types/api.types"
@@ -37,9 +37,7 @@ export function HeaderKaprodi() {
 
   return (
     <div className="flex justify-end items-center gap-6 mb-8">
-      <button className="text-black hover:text-gray-700 transition-colors">
-        <Bell className="w-5 h-5" />
-      </button>
+      <NotificationBell />
       <div className="flex items-center gap-3">
         <div className="flex flex-col items-end">
           <span className="text-[14px] font-bold text-gray-900 leading-tight">{displayName}</span>
