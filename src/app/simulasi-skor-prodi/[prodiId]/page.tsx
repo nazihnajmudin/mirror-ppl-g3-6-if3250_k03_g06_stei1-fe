@@ -14,11 +14,13 @@ import { Loader2, AlertCircle, Save, TrendingUp, FileText, CheckCircle, Edit3 } 
 import { cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/errors"
 import { getSimulationScore, updateSimulationQualitative, getProdiById } from "@/lib/api-prodi"
+import { useUser } from "@/hooks/useUser"
 import type { SimulationScore, SimulationIndicator, Prodi } from "@/types/api.types"
 
 export default function SimulasiSkorProdiPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useUser()
   const prodiId = params.prodiId as string
 
   const [simulation, setSimulation] = useState<SimulationScore | null>(null)
@@ -212,7 +214,9 @@ export default function SimulasiSkorProdiPage() {
                 <TableHead>Total</TableHead>
                 <TableHead>Sheet Completion</TableHead>
                 <TableHead>Evidence Count</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                {user?.role === 'KAPRODI' && (
+                  <TableHead className="text-right">Aksi</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,16 +262,18 @@ export default function SimulasiSkorProdiPage() {
                   <TableCell>
                     <Badge variant="outline">{indicator.evidenceCount}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      onClick={() => handleEditQualitative(indicator)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                  </TableCell>
+                  {user?.role === 'KAPRODI' && (
+                    <TableCell className="text-right">
+                      <Button
+                        onClick={() => handleEditQualitative(indicator)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -276,7 +282,7 @@ export default function SimulasiSkorProdiPage() {
       </Card>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
             <DialogTitle>Edit Skor Kualitatif</DialogTitle>
           </DialogHeader>
@@ -285,6 +291,7 @@ export default function SimulasiSkorProdiPage() {
               <Label htmlFor="code">Indikator</Label>
               <Input
                 id="code"
+                className="bg-white disabled:opacity-100"
                 value={`${editingIndicator?.code} - ${editingIndicator?.name}`}
                 disabled
               />
@@ -293,6 +300,7 @@ export default function SimulasiSkorProdiPage() {
               <Label htmlFor="qualitativeScore">Skor Kualitatif (0-100)</Label>
               <Input
                 id="qualitativeScore"
+                className="bg-white"
                 type="number"
                 min="0"
                 max="100"
@@ -305,6 +313,7 @@ export default function SimulasiSkorProdiPage() {
               <Label htmlFor="qualitativeNote">Catatan</Label>
               <Textarea
                 id="qualitativeNote"
+                className="bg-white"
                 value={qualitativeNote}
                 onChange={(e) => setQualitativeNote(e.target.value)}
                 placeholder="Masukkan catatan kualitatif"
