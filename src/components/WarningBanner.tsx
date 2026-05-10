@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation"
 import apiClient from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 
+// 1. IMPORT HOOK USEUSER
+import { useUser } from "@/hooks/useUser"
+
 interface Notification {
   id: string
   title: string
@@ -22,21 +25,26 @@ export function WarningBanner() {
   const [activeAlerts, setActiveAlerts] = useState<Notification[]>([])
   const [dismissed, setDismissed] = useState(false)
   const router = useRouter()
+  const { user, loading } = useUser()
 
   useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        const res = await apiClient.get('/notifications')
-        const all = res.data.data || []
-        // Hanya tampilkan notifikasi WARNING dan DANGER yang belum dibaca
-        const critical = all.filter((n: Notification) => !n.isRead && (n.type === 'WARNING' || n.type === 'DANGER'))
-        setActiveAlerts(critical)
-      } catch (error) {
-        console.error('Gagal mengambil alert banner:', error)
+    if (loading) return;
+    const isSuperOrPimpinan = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
+
+    if (isSuperOrPimpinan) {
+      const fetchAlerts = async () => {
+        try {
+          const res = await apiClient.get('/notifications')
+          const all = res.data.data || []
+          const critical = all.filter((n: Notification) => !n.isRead && (n.type === 'WARNING' || n.type === 'DANGER'))
+          setActiveAlerts(critical)
+        } catch (error) {
+          console.error('Gagal mengambil alert banner:', error)
+        }
       }
+      fetchAlerts()
     }
-    fetchAlerts()
-  }, [])
+  }, [user?.role, loading]) // Tambahkan dependency
 
   if (dismissed || activeAlerts.length === 0) return null
 

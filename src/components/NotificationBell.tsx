@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button"
 import apiClient from "@/lib/api-client"
 import { cn } from "@/lib/utils"
+import { useUser } from "@/hooks/useUser"
 
 interface Notification {
   id: string
@@ -31,6 +32,7 @@ interface Notification {
 
 export function NotificationBell() {
   const router = useRouter()
+  const { user } = useUser()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -51,7 +53,7 @@ export function NotificationBell() {
     // Refresh every 5 minutes
     const interval = setInterval(fetchNotifications, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [fetchNotifications])
+  }, [fetchNotifications, user?.role])
 
   const unreadNotifications = notifications.filter(n => !n.isRead)
   const unreadCount = unreadNotifications.length
