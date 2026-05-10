@@ -132,7 +132,7 @@ export function NotificationBell() {
                   {formatTime(n.createdAt)}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 line-clamp-2 ml-6">
+              <p className="text-xs text-gray-500 ml-6 whitespace-normal break-words">
                 {n.message}
               </p>
               {n.prodi && (
