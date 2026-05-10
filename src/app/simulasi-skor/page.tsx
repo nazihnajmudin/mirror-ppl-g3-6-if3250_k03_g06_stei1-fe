@@ -10,6 +10,7 @@ import { Loader2, AlertCircle, TrendingUp, Eye, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
+import { useUser } from "@/hooks/useUser"
 import type { ApiResponse, ProdiOption } from "@/types/api.types"
 
 interface ProdiWithSimulation extends ProdiOption {
@@ -21,11 +22,22 @@ interface ProdiWithSimulation extends ProdiOption {
 
 export default function SimulasiSkorPage() {
   const router = useRouter()
+  const { user, loading: userLoading } = useUser()
   const [prodis, setProdis] = useState<ProdiWithSimulation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!userLoading && user?.role === 'KAPRODI' && user?.prodiId) {
+      router.push(`/simulasi-skor-prodi/${user.prodiId}`)
+    }
+  }, [user?.role, user?.prodiId, userLoading, router])
+
+  useEffect(() => {
+    if (!userLoading && user?.role === 'KAPRODI') {
+      return
+    }
+
     const loadProdis = async () => {
       setLoading(true)
       setError(null)
@@ -33,7 +45,6 @@ export default function SimulasiSkorPage() {
         const response = await apiClient.get<ApiResponse<ProdiOption[]>>("/prodi")
         const prodiList = response.data.data || []
 
-        // Fetch dashboard data for each prodi
         const prodiWithSimulation = await Promise.all(
           prodiList.map(async (prodi) => {
             try {
@@ -50,7 +61,6 @@ export default function SimulasiSkorPage() {
                   ("needs_attention" as const),
               }
             } catch (err) {
-              // If dashboard fetch fails, return prodi without dashboard data
               return {
                 ...prodi,
                 status: "needs_attention" as const,
@@ -69,7 +79,7 @@ export default function SimulasiSkorPage() {
     }
 
     loadProdis()
-  }, [])
+  }, [userLoading, user?.role])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -90,12 +100,16 @@ export default function SimulasiSkorPage() {
     (b.dashboard?.simulationScore || 0) - (a.dashboard?.simulationScore || 0)
   )
 
-  if (loading) {
+  if (loading || userLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     )
+  }
+
+  if (user?.role === 'KAPRODI') {
+    return null
   }
 
   if (error) {

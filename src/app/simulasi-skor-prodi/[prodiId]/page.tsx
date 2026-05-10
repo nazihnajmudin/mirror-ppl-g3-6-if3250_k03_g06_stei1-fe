@@ -32,6 +32,7 @@ export default function SimulasiSkorProdiPage() {
   const [editingIndicator, setEditingIndicator] = useState<SimulationIndicator | null>(null)
   const [qualitativeScore, setQualitativeScore] = useState("")
   const [qualitativeNote, setQualitativeNote] = useState("")
+  const [scoreError, setScoreError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -59,26 +60,52 @@ export default function SimulasiSkorProdiPage() {
     setEditingIndicator(indicator)
     setQualitativeScore(indicator.qualitativeScore?.toString() || "")
     setQualitativeNote(indicator.qualitativeNote || "")
+    setScoreError(null)
     setEditDialogOpen(true)
+  }
+
+  const validateScore = (value: string) => {
+    if (!value.trim()) {
+      setScoreError(null)
+      return
+    }
+    const score = Number(value)
+    if (isNaN(score)) {
+      setScoreError("Skor harus berupa angka")
+    } else if (score < 0 || score > 100) {
+      setScoreError("Skor harus antara 0-100")
+    } else {
+      setScoreError(null)
+    }
   }
 
   const handleSaveQualitative = async () => {
     if (!editingIndicator) return
 
+    const scoreValue = qualitativeScore.trim()
+    const noteValue = qualitativeNote.trim()
+    
+    if (!scoreValue && !noteValue) {
+      setError("Minimal salah satu dari skor atau catatan harus diisi")
+      return
+    }
+
+    if (scoreError) {
+      setError("Perbaiki skor kualitatif sebelum menyimpan")
+      return
+    }
+
     setSaving(true)
     try {
-      const score = Number(qualitativeScore)
-      if (qualitativeScore.trim() === '' || isNaN(score)) {
-        throw new Error("Skor kualitatif harus diisi dengan angka antara 0-100")
-      }
-      if (score < 0 || score > 100) {
-        throw new Error("Skor kualitatif harus antara 0-100")
+      let score: number | undefined
+      if (scoreValue) {
+        score = Number(scoreValue)
       }
 
       await updateSimulationQualitative(prodiId, [{
         code: editingIndicator.code,
         qualitativeScore: score,
-        qualitativeNote: qualitativeNote || null
+        qualitativeNote: noteValue || null
       }])
 
       // Reload data
@@ -211,8 +238,9 @@ export default function SimulasiSkorProdiPage() {
                 <TableHead>Nama Indikator</TableHead>
                 <TableHead>Kuantitatif</TableHead>
                 <TableHead>Kualitatif</TableHead>
+                <TableHead>Catatan</TableHead>
                 <TableHead>Total</TableHead>
-                <TableHead>Sheet Completion</TableHead>
+                <TableHead>Progres Sheet</TableHead>
                 <TableHead>Evidence Count</TableHead>
                 {user?.role === 'KAPRODI' && (
                   <TableHead className="text-right">Aksi</TableHead>
@@ -231,16 +259,18 @@ export default function SimulasiSkorProdiPage() {
                   </TableCell>
                   <TableCell>
                     {indicator.qualitativeScore !== null ? (
-                      <div>
-                        <span className={cn("font-semibold", getScoreColor(indicator.qualitativeScore))}>
-                          {indicator.qualitativeScore}
-                        </span>
-                        {indicator.qualitativeNote && (
-                          <p className="text-xs text-gray-500 mt-1">{indicator.qualitativeNote}</p>
-                        )}
-                      </div>
+                      <span className={cn("font-semibold", getScoreColor(indicator.qualitativeScore))}>
+                        {indicator.qualitativeScore}
+                      </span>
                     ) : (
                       <span className="text-gray-400">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {indicator.qualitativeNote ? (
+                      <p className="text-sm text-gray-600 max-w-xs line-clamp-2">{indicator.qualitativeNote}</p>
+                    ) : (
+                      <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -300,14 +330,20 @@ export default function SimulasiSkorProdiPage() {
               <Label htmlFor="qualitativeScore">Skor Kualitatif (0-100)</Label>
               <Input
                 id="qualitativeScore"
-                className="bg-white"
+                className={cn("bg-white", scoreError && "border-red-500")}
                 type="number"
                 min="0"
                 max="100"
                 value={qualitativeScore}
-                onChange={(e) => setQualitativeScore(e.target.value)}
+                onChange={(e) => {
+                  setQualitativeScore(e.target.value)
+                  validateScore(e.target.value)
+                }}
                 placeholder="Masukkan skor kualitatif"
               />
+              {scoreError && (
+                <p className="text-sm text-red-600 mt-1">{scoreError}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="qualitativeNote">Catatan</Label>
@@ -328,7 +364,10 @@ export default function SimulasiSkorProdiPage() {
               >
                 Batal
               </Button>
-              <Button onClick={handleSaveQualitative} disabled={saving}>
+              <Button 
+                onClick={handleSaveQualitative} 
+                disabled={saving || !!scoreError || (!qualitativeScore.trim() && !qualitativeNote.trim())}
+              >
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 <Save className="w-4 h-4 mr-2" />
                 Simpan

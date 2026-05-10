@@ -131,7 +131,7 @@ export const getSimulationScore = async (prodiId: string): Promise<SimulationSco
 
 export const updateSimulationQualitative = async (
   prodiId: string,
-  qualitativeScores: Array<{ code: string; qualitativeScore: number; qualitativeNote?: string | null }>
+  qualitativeScores: Array<{ code: string; qualitativeScore?: number; qualitativeNote?: string | null }>
 ): Promise<SimulationScore> => {
   const response = await apiClient.put<ApiResponse<SimulationScore>>(`/simulasi-skor/${prodiId}/qualitative`, {
     qualitativeScores,
