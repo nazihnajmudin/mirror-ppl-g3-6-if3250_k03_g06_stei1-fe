@@ -170,6 +170,10 @@ export function Sidebar() {
                                 <Award className="h-4 w-4" />
                                 Manajemen Sertifikat
                             </Link>
+                            <Link href="/data-institusi" className={cn(submenuBaseClass, pathname.startsWith('/data-institusi') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <Database className="h-4 w-4" />
+                                Pusat Data Institusi
+                            </Link>
                         </div>
                     </div>
                 )}
