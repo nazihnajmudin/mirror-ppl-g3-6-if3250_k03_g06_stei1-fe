@@ -13,6 +13,9 @@ interface Notification {
   type: 'INFO' | 'WARNING' | 'DANGER'
   isRead: boolean
   targetUrl?: string
+  prodi?: {
+    fullname: string
+  }
 }
 
 export function WarningBanner() {
@@ -63,9 +66,13 @@ export function WarningBanner() {
         ) : (
           <AlertTriangle className="w-5 h-5 flex-shrink-0" />
         )}
-        <div className="flex flex-col sm:flex-row sm:items-center">
-          <span className="font-bold sm:mr-2 text-sm">{alert.title}</span>
-          <span className="text-xs sm:text-sm opacity-90 line-clamp-1">{alert.message}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <span className="font-bold text-sm">{alert.title}</span>
+          {alert.prodi && (
+            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full whitespace-nowrap">
+              {alert.prodi.fullname}
+            </span>
+          )}
         </div>
       </div>
       
