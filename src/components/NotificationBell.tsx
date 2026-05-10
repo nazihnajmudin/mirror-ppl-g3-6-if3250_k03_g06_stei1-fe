@@ -6,6 +6,7 @@ import { Bell, AlertCircle, Info, AlertTriangle, Check } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
