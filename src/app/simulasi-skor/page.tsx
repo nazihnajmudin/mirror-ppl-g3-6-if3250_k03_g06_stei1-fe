@@ -16,7 +16,7 @@ interface ProdiWithSimulation extends ProdiOption {
   dashboard?: {
     simulationScore?: number
   }
-  status?: "excellent" | "good" | "needs_attention"
+  status?: "unggul" | "baik_sekali" | "baik" | "needs_attention"
 }
 
 export default function SimulasiSkorPage() {
@@ -44,8 +44,9 @@ export default function SimulasiSkorPage() {
                 ...prodi,
                 dashboard: dashboardData,
                 status:
-                  score >= 300 ? ("excellent" as const) :
-                  score >= 150 ? ("good" as const) :
+                  score >= 361 ? ("unggul" as const) :
+                  score >= 301 ? ("baik_sekali" as const) :
+                  score >= 200 ? ("baik" as const) :
                   ("needs_attention" as const),
               }
             } catch (err) {
@@ -72,12 +73,14 @@ export default function SimulasiSkorPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "excellent":
-        return <Badge className="bg-green-100 text-green-800">Excellent (≥300)</Badge>
-      case "good":
-        return <Badge className="bg-yellow-100 text-yellow-800">Good (150-299)</Badge>
+      case "unggul":
+        return <Badge className="bg-emerald-100 text-emerald-800">Unggul (≥361)</Badge>
+      case "baik_sekali":
+        return <Badge className="bg-sky-100 text-sky-800">Baik Sekali (301-360)</Badge>
+      case "baik":
+        return <Badge className="bg-yellow-100 text-yellow-800">Baik (200-300)</Badge>
       case "needs_attention":
-        return <Badge className="bg-red-100 text-red-800">Needs Attention (&lt;150)</Badge>
+        return <Badge className="bg-red-100 text-red-800">Perlu Perhatian (&lt;200)</Badge>
       default:
         return <Badge variant="secondary">Unknown</Badge>
     }
@@ -115,7 +118,7 @@ export default function SimulasiSkorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Program Studi</CardTitle>
@@ -128,19 +131,31 @@ export default function SimulasiSkorPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Excellent (≥300)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Unggul (≥361)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {prodis.filter(p => p.status === "excellent").length}
+            <div className="text-2xl font-bold text-emerald-600">
+              {prodis.filter(p => p.status === "unggul").length}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Perlu Perhatian </CardTitle>
+            <CardTitle className="text-sm font-medium">Baik Sekali (301-360)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-sky-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-sky-600">
+              {prodis.filter(p => p.status === "baik_sekali").length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Perlu Perhatian (&lt;200)</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>

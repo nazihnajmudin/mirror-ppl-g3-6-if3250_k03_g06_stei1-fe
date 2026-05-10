@@ -92,15 +92,17 @@ export default function SimulasiSkorProdiPage() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600"
-    if (score >= 60) return "text-yellow-600"
+    if (score >= 361) return "text-emerald-600"
+    if (score >= 301) return "text-teal-600"
+    if (score >= 200) return "text-yellow-600"
     return "text-red-600"
   }
 
   const getScoreBadge = (score: number) => {
-    if (score >= 300) return <Badge className="bg-green-100 text-green-800">Excellent</Badge>
-    if (score >= 150) return <Badge className="bg-yellow-100 text-yellow-800">Good</Badge>
-    return <Badge className="bg-red-100 text-red-800">Needs Attention</Badge>
+    if (score >= 361) return <Badge className="bg-emerald-100 text-emerald-800">Unggul</Badge>
+    if (score >= 301) return <Badge className="bg-sky-100 text-sky-800">Baik Sekali</Badge>
+    if (score >= 200) return <Badge className="bg-yellow-100 text-yellow-800">Baik</Badge>
+    return <Badge className="bg-red-100 text-red-800">Perlu Perhatian</Badge>
   }
 
   if (loading) {
@@ -196,7 +198,7 @@ export default function SimulasiSkorProdiPage() {
         <CardHeader>
           <CardTitle>Detail Indikator</CardTitle>
           <p className="text-sm text-gray-600">
-            Skor kuantitatif dihitung dari completion LKPS (70%) dan jumlah eviden (30%)
+            Skor kuantitatif dihitung dari penyelesaian LKPS (70%) dan jumlah eviden (30%)
           </p>
         </CardHeader>
         <CardContent>
@@ -234,7 +236,7 @@ export default function SimulasiSkorProdiPage() {
                         )}
                       </div>
                     ) : (
-                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-400">0</span>
                     )}
                   </TableCell>
                   <TableCell>
