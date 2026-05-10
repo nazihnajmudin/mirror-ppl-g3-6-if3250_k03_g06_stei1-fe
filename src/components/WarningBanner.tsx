@@ -44,6 +44,7 @@ export function WarningBanner() {
 
   const handleViewAlert = async (alert: Notification) => {
     try {
+      setDismissed(true) // Hide immediately
       if (!alert.isRead) {
         await apiClient.patch(`/notifications/${alert.id}/read`)
       }
