@@ -23,9 +23,10 @@ interface Props {
   value: any;
   onChange: (value: any) => void;
   compact?: boolean;
+  disabled?: boolean;
 }
 
-export default function LKPSFormField({ column, value, onChange, compact = false }: Props) {
+export default function LKPSFormField({ column, value, onChange, compact = false, disabled = false }: Props) {
   const baseInputClass = compact 
     ? "text-xs px-2 py-1 h-8" 
     : "text-sm px-2 py-1";
@@ -39,6 +40,7 @@ export default function LKPSFormField({ column, value, onChange, compact = false
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : '')}
           className={baseInputClass}
           placeholder="0"
+          disabled={disabled}
         />
       );
 
@@ -50,6 +52,7 @@ export default function LKPSFormField({ column, value, onChange, compact = false
           onChange={(e) => onChange(e.target.value)}
           className={baseInputClass}
           placeholder="Ketik teks..."
+          disabled={disabled}
         />
       );
 
@@ -58,9 +61,10 @@ export default function LKPSFormField({ column, value, onChange, compact = false
         <textarea
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full border border-gray-300 rounded-md px-2 py-1 ${baseInputClass} font-sans`}
+          className={`w-full border border-gray-300 rounded-md px-2 py-1 ${baseInputClass} font-sans disabled:opacity-50 disabled:bg-gray-50`}
           rows={compact ? 2 : 3}
           placeholder="Masukkan deskripsi..."
+          disabled={disabled}
         />
       );
 
@@ -71,6 +75,7 @@ export default function LKPSFormField({ column, value, onChange, compact = false
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={baseInputClass}
+          disabled={disabled}
         />
       );
 
@@ -82,6 +87,7 @@ export default function LKPSFormField({ column, value, onChange, compact = false
           onChange={(e) => onChange(e.target.value)}
           className={baseInputClass}
           placeholder="https://..."
+          disabled={disabled}
         />
       );
 
@@ -91,13 +97,14 @@ export default function LKPSFormField({ column, value, onChange, compact = false
           type="checkbox"
           checked={value === true || value === 1 || value === 'true'}
           onChange={(e) => onChange(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300"
+          className="w-4 h-4 rounded border-gray-300 disabled:opacity-50"
+          disabled={disabled}
         />
       );
 
     case 'select':
       return (
-        <Select value={value ?? ''} onValueChange={onChange}>
+        <Select value={value ?? ''} onValueChange={onChange} disabled={disabled}>
           <SelectTrigger className={`${baseInputClass} w-full`}>
             <SelectValue placeholder="Pilih opsi..." />
           </SelectTrigger>

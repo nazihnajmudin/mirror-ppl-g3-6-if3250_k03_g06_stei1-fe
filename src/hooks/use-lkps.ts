@@ -7,6 +7,10 @@ export interface LKPSVersion {
   createdAt: string;
   originalFilename?: string;
   periode?: string;
+  status: 'DRAFT' | 'FINAL';
+  versi: number;
+  lockedAt?: string;
+  lockedBy?: string;
   prodi: { 
     fullname: string;
     abbreviation?: string;

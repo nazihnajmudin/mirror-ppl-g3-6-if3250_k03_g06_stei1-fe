@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -25,9 +25,10 @@ interface Props {
   config: Config;
   data: any[];
   onChange: (data: any[]) => void;
+  isLocked?: boolean;
 }
 
-export default function LKPSFormBuilder({ config, data, onChange }: Props) {
+export default function LKPSFormBuilder({ config, data, onChange, isLocked = false }: Props) {
   const [expandedRows, setExpandedRows] = useState<number[]>([0]); // Default expand first row
 
   // DEBUG
@@ -35,19 +36,21 @@ export default function LKPSFormBuilder({ config, data, onChange }: Props) {
   console.log('LKPSFormBuilder received data:', data);
 
   const handleAddRow = () => {
+    if (isLocked) return;
     const newRow = config.columns.reduce((acc, col) => {
       acc[col.key] = col.type === 'boolean' ? false : '';
       return acc;
     }, {} as any);
-    
     onChange([...data, newRow]);
   };
 
   const handleDeleteRow = (index: number) => {
+    if (isLocked) return;
     onChange(data.filter((_, i) => i !== index));
   };
 
   const handleFieldChange = (rowIndex: number, fieldKey: string, value: any) => {
+    if (isLocked) return;
     const updated = [...data];
     updated[rowIndex] = {
       ...updated[rowIndex],
@@ -67,6 +70,12 @@ export default function LKPSFormBuilder({ config, data, onChange }: Props) {
   // Compact table view on desktop, card view on mobile
   return (
     <div className="space-y-4">
+      {isLocked && (
+        <div className="bg-amber-50 text-amber-800 p-3 rounded-md text-sm flex items-center gap-2 font-medium border border-amber-200">
+          <Lock className="w-4 h-4" /> Dokumen ini berstatus FINAL dan terkunci. Anda tidak dapat mengubah datanya.
+        </div>
+      )}
+
       {/* Desktop: Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse text-sm">
@@ -107,6 +116,7 @@ export default function LKPSFormBuilder({ config, data, onChange }: Props) {
                         column={col}
                         value={row[col.key]}
                         onChange={(value) => handleFieldChange(rowIndex, col.key, value)}
+                        disabled={isLocked}
                       />
                     )}
                   </td>
@@ -162,12 +172,13 @@ export default function LKPSFormBuilder({ config, data, onChange }: Props) {
                         value={row[col.key]}
                         onChange={(value) => handleFieldChange(rowIndex, col.key, value)}
                         compact={true}
+                        disabled={isLocked}
                       />
                     )}
                   </div>
                 ))}
 
-                {config.rowType === 'free' && (
+                {config.rowType === 'free' && !isLocked && (
                   <Button
                     variant="destructive"
                     size="sm"
@@ -185,7 +196,7 @@ export default function LKPSFormBuilder({ config, data, onChange }: Props) {
       </div>
 
       {/* Add Row Button (only for free rows) */}
-      {config.rowType === 'free' && (
+      {config.rowType === 'free' && !isLocked && (
         <div className="pt-4">
           <Button
             variant="outline"
