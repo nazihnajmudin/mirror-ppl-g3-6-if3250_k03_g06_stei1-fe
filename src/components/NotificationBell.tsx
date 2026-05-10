@@ -101,10 +101,12 @@ export function NotificationBell() {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 max-h-[450px] overflow-y-auto">
-        <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Notifikasi</span>
-          {loading && <span className="text-[10px] text-gray-400 animate-pulse">Memperbarui...</span>}
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex items-center justify-between">
+            <span>Notifikasi</span>
+            {loading && <span className="text-[10px] text-gray-400 animate-pulse">Memperbarui...</span>}
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         {notifications.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
