@@ -76,3 +76,21 @@
 .tiptap u {
   text-decoration: underline;
 }
+
+.tiptap a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap a:hover {
+  color: #1d4ed8;
+}
+
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.5em 0;
+  border-radius: 4px;
+}

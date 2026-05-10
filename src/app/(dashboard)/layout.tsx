@@ -3,6 +3,7 @@
 import { useAuthGuard } from "@/hooks/useAuthGuard"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
+import { WarningBanner } from "@/components/WarningBanner"
 import { Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -35,6 +36,7 @@ export default function DashboardLayout({
 
         {/* Main Content Area - Adjusted for mobile header and desktop sidebar */}
         <main className="w-full flex-1 flex flex-col md:ml-64">
+            <WarningBanner />
             {/* Mobile Header */}
             <div className="md:hidden h-16" />
             

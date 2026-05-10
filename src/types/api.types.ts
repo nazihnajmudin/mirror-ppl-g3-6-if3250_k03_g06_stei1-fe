@@ -43,6 +43,7 @@ export interface AccreditationInfo {
   startDate?: string;
   endDate?: string;
   certificateUrl?: string;
+  certificateOriginalName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -139,4 +140,24 @@ export interface DashboardData {
     role: string;
     isReadOnly: boolean;
   };
+}
+
+export interface SimulationIndicator {
+  code: string;
+  name: string;
+  quantitativeScore: number;
+  qualitativeScore: number | null;
+  qualitativeNote?: string | null;
+  totalScore: number;
+  evidenceCount: number;
+  sheetCompletion: number;
+}
+
+export interface SimulationScore {
+  prodiId: string;
+  indicators: SimulationIndicator[];
+  quantitativeScore: number;
+  qualitativeScore: number;
+  totalScore: number;
+  updatedAt: string;
 }

@@ -2,6 +2,7 @@
 
 import { useAuthGuard } from "@/hooks/useAuthGuard"
 import { Sidebar } from "@/components/layout/sidebar"
+import { WarningBanner } from "@/components/WarningBanner"
 import { Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -31,6 +32,7 @@ export default function DashboardProdiLayout({
                 <Sidebar/>
             </aside>
             <main className="w-full flex-1 flex flex-col md:ml-64">
+                <WarningBanner />
                 <div className="md:hidden h-16" />
                 <div className="p-4 md:p-8 min-h-screen">
                     <div className="max-w-7xl mx-auto">

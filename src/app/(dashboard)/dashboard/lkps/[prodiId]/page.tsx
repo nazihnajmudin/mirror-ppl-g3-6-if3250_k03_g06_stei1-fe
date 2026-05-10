@@ -9,7 +9,9 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Lock,
+  Unlock
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,6 +95,7 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
   }, [versions, activeVersionId]);
 
   const activeVersion = versions.find(v => v.id === activeVersionId) || (versions.length > 0 ? versions[0] : null);
+  const isLocked = activeVersion?.status === 'FINAL';
 
   const handleExport = async () => {
     if (!activeVersionId) return;
@@ -141,7 +144,20 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
     }
   };
 
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const target = currentStatus === 'DRAFT' ? 'FINAL' : 'DRAFT';
+    if (!confirm(`Yakin ingin mengubah status dokumen ini menjadi ${target}?`)) return;
+    try {
+        await apiClient.put(`/lkps/document/status/${id}`, { status: target });
+        toast({ title: "Berhasil", description: `Status dokumen diubah menjadi ${target}` });
+        refresh();
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Gagal", description: error?.response?.data?.message || "Terjadi kesalahan." });
+    }
+  };
+
   const isViewOnly = user?.role === 'PIMPINAN' || user?.role === 'SUPER_ADMIN';
+  const canToggleLock = user?.role === 'SUPER_ADMIN' || (user?.role === 'KAPRODI' && user?.prodiId === prodiId);
   const prodiName = allVersions[0]?.prodi?.fullname || "Program Studi";
 
   return (
@@ -248,9 +264,28 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
                             {formatDate(v.createdAt)}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-600 truncate">
+                        <p className="text-[11px] text-gray-600 truncate mb-2">
                           {v.originalFilename || v.name}
                         </p>
+                        
+                        <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                          <span className={cn("text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1.5 w-max", v.status === 'FINAL' ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600")}>
+                              {v.status === 'FINAL' ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>}
+                              {v.status || 'DRAFT'}
+                          </span>
+                          
+                          {canToggleLock && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={(e) => { e.stopPropagation(); handleToggleStatus(v.id, v.status || 'DRAFT'); }} 
+                                className={cn("h-6 px-2 text-[10px] font-bold", v.status === 'FINAL' ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50" : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50")}
+                              >
+                                  {v.status === 'FINAL' ? "Buka Kunci" : "Finalisasi"}
+                              </Button>
+                          )}
+                        </div>
+
                       </div>
                     </div>
                   );
@@ -272,8 +307,9 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
                     <h2 className="text-[15px] font-bold text-gray-900 leading-tight truncate">
                         {activeVersion?.originalFilename || activeVersion?.name || `Preview LKPS (${activePeriode})`}
                     </h2>
-                    <p className="text-[12px] text-gray-500 truncate">
+                    <p className="text-[12px] text-gray-500 truncate flex items-center gap-2">
                         {activeVersion ? `Versi ${versions.length - versions.findIndex(v => v.id === activeVersionId)} • ${formatDate(activeVersion.createdAt)}` : 'Binary Document (.xlsx)'}
+                        {isLocked && <span className="inline-flex items-center text-amber-600 font-bold bg-amber-50 px-1.5 rounded"><Lock className="w-3 h-3 mr-1"/> FINAL</span>}
                     </p>
                 </div>
               </div>
@@ -297,35 +333,50 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
                   Silakan klik tombol <b>Unduh</b> untuk melihat isi file, atau gunakan <b>Mirror Excel</b> untuk entri data langsung.
                 </p>
                 
-                <div className="flex flex-col gap-3 items-center">
-                  <div className="flex gap-3 flex-wrap justify-center">
-                    <Button 
-                      onClick={() => {
-                        if (activeVersionId) {
-                          router.push(`/dashboard/lkps/${prodiId}/form?documentId=${activeVersionId}`);
-                        }
-                      }}
-                      disabled={!activeVersionId}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                    >
-                      <FileSpreadsheet className="w-6 h-6" />
-                      Isi Form LKPS
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        const url = `/dashboard/lkps/${prodiId}/report${activeVersionId ? `?versionId=${activeVersionId}` : ''}`;
-                        router.push(url);
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                    >
-                      <FileSpreadsheet className="w-6 h-6" />
-                      Mirror Excel
-                    </Button>
+                {isLocked ? (
+                  <div className="flex flex-col gap-3 items-center mt-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center max-w-md shadow-sm">
+                      <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Lock className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-[14px] font-bold text-gray-900 mb-1">Dokumen Terkunci (FINAL)</h3>
+                      <p className="text-xs text-gray-600">
+                          Akses menuju pengisian Form dan Mirror Excel telah ditutup karena versi dokumen yang Anda pilih berstatus FINAL.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-gray-400">
-                    * Form LKPS untuk entri data terstruktur, atau Mirror Excel untuk tampilan spreadsheet tradisional.
-                  </p>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-3 items-center">
+                    <div className="flex gap-3 flex-wrap justify-center">
+                      <Button 
+                        onClick={() => {
+                          if (activeVersionId) {
+                            router.push(`/dashboard/lkps/${prodiId}/form?documentId=${activeVersionId}`);
+                          }
+                        }}
+                        disabled={!activeVersionId}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <FileSpreadsheet className="w-6 h-6" />
+                        Isi Form LKPS
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          const url = `/dashboard/lkps/${prodiId}/report${activeVersionId ? `?versionId=${activeVersionId}` : ''}`;
+                          router.push(url);
+                        }}
+                        disabled={!activeVersionId}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <FileSpreadsheet className="w-6 h-6" />
+                        Mirror Excel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      * Form LKPS untuk entri data terstruktur, atau Mirror Excel untuk tampilan spreadsheet tradisional.
+                    </p>
+                  </div>
+                )}
 
                 {versions.length === 0 && !loading && (
                     <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100 text-blue-700 text-sm max-w-sm">

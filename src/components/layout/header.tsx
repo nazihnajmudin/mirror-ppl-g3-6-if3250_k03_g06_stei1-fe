@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/hooks/useUser";
+import { NotificationBell } from "@/components/NotificationBell"
 
 const roleLabel: Record<string, string> = {
     SUPER_ADMIN: "Super Admin",
@@ -45,7 +46,7 @@ const navigation = [
     { name: 'LED', href: '/led', icon: FileText},
     { name: 'Data Kuantitatif Institusi', href: '#', icon: Database},
     { name: 'Monitoring & Evaluasi', href: '#', icon: Activity},
-    { name: 'Simulasi Skor Akreditasi', href: '#', icon: Calculator},
+    { name: 'Simulasi Skor Akreditasi', href: '/simulasi-skor', icon: Calculator},
     { name: 'Unduh Laporan/Dokumen', href: '#', icon: Download},
     { name: 'Manajemen Akun', href: '/manajemen-akun', icon: Users},
     { name: 'Pengaturan', href: '#', icon: Settings},
@@ -125,9 +126,7 @@ export function Header() {
 
             {/* Desktop Header */}
             <div className="hidden md:flex justify-end items-center gap-6 mb-8">
-                <button className="text-black hover:text-gray-700 transition-colors">
-                    <Bell className="w-5 h-5" />
-                </button>
+                <NotificationBell />
                 <div className="flex items-center gap-3">
                     <div className="flex flex-col items-end">
                         <span className="text-[14px] font-bold text-gray-900 leading-tight">{displayName}</span>

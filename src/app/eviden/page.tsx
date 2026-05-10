@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
-import { Plus, Eye, Edit, Trash2, ArrowUpDown, Filter, SortAsc, SortDesc, CalendarDays, Building, Loader2, BookOpen, Search, HardDrive, FileStack, RefreshCcw } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, ArrowUpDown, Filter, SortAsc, SortDesc, CalendarDays, Building, Loader2, BookOpen, Search, HardDrive, FileStack, RefreshCcw, Lock, Unlock } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import apiClient from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -47,9 +47,6 @@ export default function EvidenListPage() {
     const urlProdiId = searchParams.get("prodiId");
     const { user, loading } = useUser();
     
-    // ==========================================
-    // 1. ALL HOOKS
-    // ==========================================
     const [evidenList, setEvidenList] = useState<any[]>([]);
     const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
     const [isFetching, setIsFetching] = useState(true);
@@ -65,26 +62,26 @@ export default function EvidenListPage() {
         minSizeMB: "", maxSizeMB: ""
     });
 
+    const fetchInitialData = async () => {
+        setIsFetching(true);
+        try {
+            const [prodiRes, evidenRes] = await Promise.all([
+                apiClient.get('/prodi/my-prodi'),
+                apiClient.get('/eviden')
+            ]);
+            setAccessibleProdis(prodiRes.data.data || []);
+            setEvidenList(evidenRes.data.data || []);
+        } catch (error) {
+            console.error("Gagal mengambil data", error);
+        } finally {
+            setIsFetching(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchInitialData = async () => {
-            setIsFetching(true);
-            try {
-                const [prodiRes, evidenRes] = await Promise.all([
-                    apiClient.get('/prodi/my-prodi'),
-                    apiClient.get('/eviden')
-                ]);
-                setAccessibleProdis(prodiRes.data.data || []);
-                setEvidenList(evidenRes.data.data || []);
-            } catch (error) {
-                console.error("Gagal mengambil data", error);
-            } finally {
-                setIsFetching(false);
-            }
-        };
         if (user) fetchInitialData();
     }, [user]);
 
-    // Pre-kalkulasi variabel dasar untuk useMemo
     const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
     const showProdiColumn = isAdmin || user?.role === 'TIM_PRODI';
 
@@ -93,7 +90,6 @@ export default function EvidenListPage() {
     
     const baseEvidenData = isAdmin ? evidenList : evidenList.filter(e => e.prodiId === activeProdiId);
 
-    // HOOK USEMEMO
     const processedEviden = useMemo(() => {
         let result = [...baseEvidenData];
 
@@ -130,19 +126,14 @@ export default function EvidenListPage() {
                     case 'count': valA = a.fileCount; valB = b.fileCount; break;
                     default: return 0;
                 }
-                
                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
         }
-
         return result;
     }, [baseEvidenData, searchQuery, filters, sortConfig]);
 
-    // ==========================================
-    // 2. EARLY RETURNS
-    // ==========================================
     if (loading) return <div className="p-8 text-gray-500 flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin" /> Memuat...</div>;
     if (!user) return null;
 
@@ -169,9 +160,6 @@ export default function EvidenListPage() {
         );
     }
 
-    // ==========================================
-    // 3. RENDER UTAMA
-    // ==========================================
     const toggleFilterArray = (key: 'prodi' | 'periode' | 'indikator', value: string, checked: boolean) => {
         setFilters(prev => ({
             ...prev,
@@ -217,7 +205,8 @@ export default function EvidenListPage() {
     }
 
     const handleAction = (mode: 'view' | 'edit' | 'add', id?: string) => {
-        router.push(`/eviden/form?mode=${mode}${id ? `&id=${id}` : ''}${activeProdiId ? `&prodiId=${activeProdiId}` : ''}`);
+        const queryProdi = activeProdiId && mode === 'add' ? `&prodiId=${activeProdiId}` : '';
+        router.push(`/eviden/form?mode=${mode}${id ? `&id=${id}` : ''}${queryProdi}`);
     };
 
     const handleDelete = async (id: string) => {
@@ -226,10 +215,21 @@ export default function EvidenListPage() {
         try {
             await apiClient.delete(`/eviden/${id}`);
             setEvidenList(prev => prev.filter(e => e.id !== id));
-        } catch (error) {
-            alert("Gagal menghapus eviden.");
+        } catch (error: any) {
+            alert(error?.response?.data?.message || "Gagal menghapus eviden.");
         } finally {
             setIsDeletingId(null);
+        }
+    };
+
+    const handleToggleStatus = async (id: string, currentStatus: string) => {
+        const target = currentStatus === 'DRAFT' ? 'FINAL' : 'DRAFT';
+        if (!confirm(`Yakin ingin mengubah status dokumen ini menjadi ${target}?`)) return;
+        try {
+            await apiClient.put(`/eviden/status/${id}`, { status: target });
+            fetchInitialData();
+        } catch (error: any) {
+            alert(error?.response?.data?.message || "Gagal mengubah status dokumen.");
         }
     };
 
@@ -293,10 +293,7 @@ export default function EvidenListPage() {
                                     <DropdownMenuCheckboxItem checked={sortConfig?.key === 'count' && sortConfig.direction === 'asc'} onCheckedChange={() => setSortConfig({key: 'count', direction: 'asc'})} className="gap-2 cursor-pointer"><FileStack className="w-4 h-4"/> Paling Sedikit</DropdownMenuCheckboxItem>
                                     
                                     {sortConfig && (
-                                        <>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-red-600 focus:text-red-700 cursor-pointer justify-center text-xs font-bold">Reset Sort</DropdownMenuItem>
-                                        </>
+                                        <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setSortConfig(null)} className="text-red-600 focus:text-red-700 cursor-pointer justify-center text-xs font-bold">Reset Sort</DropdownMenuItem></>
                                     )}
                                 </DropdownMenuGroup>
                             </DropdownMenuContent>
@@ -335,7 +332,7 @@ export default function EvidenListPage() {
                                             ))}
                                         </DropdownMenuSubContent>
                                     </DropdownMenuSub>
-
+                                    
                                     <DropdownMenuSub>
                                         <DropdownMenuSubTrigger className="gap-2"><Filter className="w-4 h-4"/> Indikator / Kriteria {filters.indikator.length > 0 && `(${filters.indikator.length})`}</DropdownMenuSubTrigger>
                                         <DropdownMenuSubContent className="max-h-60 overflow-y-auto">
@@ -378,6 +375,7 @@ export default function EvidenListPage() {
                             <TableHead className="text-xs font-bold text-gray-500 px-6 py-4">Judul Eviden</TableHead>
                             {showProdiColumn && <TableHead className="text-xs font-bold text-gray-500 py-4">Program Studi</TableHead>}
                             <TableHead className="text-xs font-bold text-gray-500 py-4 whitespace-nowrap">Periode</TableHead>
+                            <TableHead className="text-xs font-bold text-gray-500 py-4">Status</TableHead>
                             <TableHead className="text-xs font-bold text-gray-500 py-4">Dokumen</TableHead>
                             <TableHead className="text-xs font-bold text-gray-500 py-4">Indikator</TableHead>
                             <TableHead className="text-xs font-bold text-gray-500 text-right pr-6 py-4">Aksi</TableHead>
@@ -385,16 +383,25 @@ export default function EvidenListPage() {
                     </TableHeader>
                     <TableBody>
                         {isFetching ? (
-                            <TableRow><TableCell colSpan={6} className="text-center py-12 text-gray-500"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-500"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
                         ) : processedEviden.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center py-12 text-gray-500">Tidak ada eviden yang sesuai dengan pencarian atau filter.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-500">Tidak ada eviden yang sesuai dengan pencarian atau filter.</TableCell></TableRow>
                         ) : (
                             processedEviden.map((eviden) => {
+                                const canToggleStatus = user.role === 'SUPER_ADMIN' || (user.role === 'KAPRODI' && eviden.prodiId === user.prodiId);
+                                const isLocked = eviden.status === 'FINAL';
+
                                 return (
                                     <TableRow key={eviden.id} className="hover:bg-gray-50/40">
                                         <TableCell className="px-6 py-4 font-bold text-sm text-gray-900">{eviden.judul}</TableCell>
                                         {showProdiColumn && <TableCell className="py-4 text-sm text-gray-600">{eviden.prodi?.abbreviation || eviden.prodi?.fullname || '-'}</TableCell>}
                                         <TableCell className="py-4 text-sm font-medium text-gray-600 whitespace-nowrap">{eviden.periode || '-'}</TableCell>
+                                        <TableCell className="py-4">
+                                            <span className={cn("text-[10px] font-bold px-2 py-1 rounded flex items-center w-max gap-1.5", isLocked ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600")}>
+                                                {isLocked ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>}
+                                                {eviden.status}
+                                            </span>
+                                        </TableCell>
                                         <TableCell className="py-4 text-sm text-gray-600">
                                             {eviden.fileCount} File <span className="text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded ml-1">{formatBytes(eviden.totalSizeBytes)}</span>
                                         </TableCell>
@@ -406,12 +413,19 @@ export default function EvidenListPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="py-4 text-right pr-6">
-                                            <div className="flex justify-end gap-4">
-                                                <button onClick={() => handleAction('view', eviden.id)} className="text-blue-500 hover:text-blue-700 text-[11px] font-bold flex items-center gap-1.5"><Eye className="w-3.5 h-3.5"/> Lihat</button>
-                                                {!isAdmin && (
+                                            <div className="flex justify-end gap-3">
+                                                <button onClick={() => handleAction('view', eviden.id)} className="text-blue-500 hover:text-blue-700 text-[11px] font-bold flex items-center gap-1"><Eye className="w-3.5 h-3.5"/> Lihat</button>
+                                                
+                                                {canToggleStatus && (
+                                                    <button onClick={() => handleToggleStatus(eviden.id, eviden.status)} className={cn("text-[11px] font-bold flex items-center gap-1", isLocked ? "text-orange-500 hover:text-orange-700" : "text-emerald-600 hover:text-emerald-800")}>
+                                                        {isLocked ? <><Unlock className="w-3.5 h-3.5"/> Buka Kunci</> : <><Lock className="w-3.5 h-3.5"/> Finalisasi</>}
+                                                    </button>
+                                                )}
+
+                                                {!isAdmin && !isLocked && (
                                                     <>
-                                                        <button onClick={() => handleAction('edit', eviden.id)} className="text-emerald-600 hover:text-emerald-800 text-[11px] font-bold flex items-center gap-1.5"><Edit className="w-3.5 h-3.5"/> Edit</button>
-                                                        <button disabled={isDeletingId === eviden.id} onClick={() => handleDelete(eviden.id)} className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1.5 disabled:opacity-50">
+                                                        <button onClick={() => handleAction('edit', eviden.id)} className="text-emerald-600 hover:text-emerald-800 text-[11px] font-bold flex items-center gap-1"><Edit className="w-3.5 h-3.5"/> Edit</button>
+                                                        <button disabled={isDeletingId === eviden.id} onClick={() => handleDelete(eviden.id)} className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 disabled:opacity-50">
                                                             {isDeletingId === eviden.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5"/>} Hapus
                                                         </button>
                                                     </>

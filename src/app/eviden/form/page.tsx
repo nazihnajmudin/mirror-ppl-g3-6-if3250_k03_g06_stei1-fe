@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UploadCloud, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Music, Video, MonitorPlay, Save, Edit, Loader2 } from "lucide-react";
+import { UploadCloud, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Music, Video, MonitorPlay, Save, Edit, Loader2, Lock, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import apiClient from "@/lib/api-client";
@@ -69,26 +69,32 @@ export default function EvidenFormPage() {
     
     const mode = searchParams.get('mode') as 'add' | 'edit' | 'view' || 'view';
     const evidenId = searchParams.get('id');
-    const urlProdiId = searchParams.get('prodiId'); // Didapat dari navigasi sebelumnya
-    const isViewOnly = mode === 'view' || user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
+    const urlProdiId = searchParams.get('prodiId');
 
+    const [accessibleProdis, setAccessibleProdis] = useState<any[]>([]);
     const [activeProdi, setActiveProdi] = useState<any>(null);
     const [isProdiLoading, setIsProdiLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
     const [formData, setFormData] = useState({
-        prodiId: urlProdiId || "",
+        prodiId: "",
         judul: "",
         deskripsi: "",
         indikator: [] as string[],
-        periode: ""
+        periode: "",
+        status: "DRAFT"
     });
     
     const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
     const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const isLocked = formData.status === 'FINAL';
+    const isViewOnly = mode === 'view' || user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN' || isLocked;
+    const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
+    const canToggleLock = user?.role === 'SUPER_ADMIN' || (user?.role === 'KAPRODI' && activeProdi?.id === user?.prodiId);
 
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -101,17 +107,18 @@ export default function EvidenFormPage() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, []);
 
-    // FETCH PRODI & MENENTUKAN PRODI AKTIF
     useEffect(() => {
         const fetchProdi = async () => {
             if (!user) return;
             try {
                 const res = await apiClient.get('/prodi/my-prodi');
                 const prodis = res.data.data || [];
-                const prodi = prodis.find((p: any) => p.id === urlProdiId) || prodis[0]; // Fallback ke prodi pertama jika url tidak ada
-                if (prodi) {
-                    setActiveProdi(prodi);
-                    if (mode === 'add') {
+                setAccessibleProdis(prodis);
+                
+                if (mode === 'add') {
+                    const prodi = prodis.find((p: any) => p.id === urlProdiId) || prodis[0];
+                    if (prodi) {
+                        setActiveProdi(prodi);
                         setFormData(prev => ({ ...prev, prodiId: prodi.id }));
                     }
                 }
@@ -124,7 +131,6 @@ export default function EvidenFormPage() {
         fetchProdi();
     }, [user, urlProdiId, mode]);
 
-    // FETCH DETAIL JIKA MODE EDIT/VIEW
     useEffect(() => {
         const fetchDetail = async () => {
             if (!evidenId) return;
@@ -138,7 +144,8 @@ export default function EvidenFormPage() {
                     judul: data.judul,
                     deskripsi: data.deskripsi || "",
                     indikator: data.indikator || [],
-                    periode: data.periode || ""
+                    periode: data.periode || "",
+                    status: data.status || "DRAFT"
                 });
 
                 if (data.files && data.files.length > 0) {
@@ -160,17 +167,25 @@ export default function EvidenFormPage() {
         if (mode !== 'add') fetchDetail();
     }, [evidenId, mode, router]);
 
+    useEffect(() => {
+        if (mode !== 'add' && formData.prodiId && accessibleProdis.length > 0) {
+            const matchedProdi = accessibleProdis.find(p => p.id === formData.prodiId);
+            if (matchedProdi) setActiveProdi(matchedProdi);
+        }
+    }, [formData.prodiId, accessibleProdis, mode]);
+
     const markAsUnsaved = () => {
         if (!isViewOnly) sessionStorage.setItem('unsavedChanges', 'true');
     };
 
     const handleFormChange = (key: keyof typeof formData, value: any) => {
+        if (isLocked) return;
         setFormData(prev => ({ ...prev, [key]: value }));
         markAsUnsaved();
     };
 
     const handleFileSelect = (files: FileList | null) => {
-        if (!files) return;
+        if (!files || isLocked) return;
         const newFiles = Array.from(files).map(f => ({
             name: f.name,
             type: f.type || "unknown",
@@ -183,6 +198,7 @@ export default function EvidenFormPage() {
     };
 
     const handleRemoveFile = (index: number) => {
+        if (isLocked) return;
         const fileToRemove = uploadedFiles[index];
         if (fileToRemove.isExisting && fileToRemove.id) {
             setDeletedFileIds(prev => [...prev, fileToRemove.id]);
@@ -207,7 +223,20 @@ export default function EvidenFormPage() {
         }
     };
 
+    const handleToggleStatus = async () => {
+        const target = formData.status === 'DRAFT' ? 'FINAL' : 'DRAFT';
+        if (!confirm(`Yakin ingin ${target === 'FINAL' ? 'mengunci' : 'membuka kunci'} dokumen eviden ini?`)) return;
+        try {
+            await apiClient.put(`/eviden/status/${evidenId}`, { status: target });
+            setFormData(prev => ({ ...prev, status: target }));
+            alert(`Status berhasil diubah menjadi ${target}.`);
+        } catch (error: any) {
+            alert(error?.response?.data?.message || "Gagal mengubah status dokumen.");
+        }
+    };
+
     const handleSave = async () => {
+        if (isLocked) return;
         if (!formData.prodiId || !formData.judul || !formData.periode) {
             alert("Program Studi, Periode, dan Judul wajib diisi.");
             return;
@@ -236,7 +265,7 @@ export default function EvidenFormPage() {
 
             sessionStorage.removeItem('unsavedChanges');
             alert("Eviden berhasil disimpan!");
-            router.push(urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
+            router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         } catch (error: any) {
             alert(error?.response?.data?.message || "Terjadi kesalahan saat menyimpan eviden.");
         } finally {
@@ -245,7 +274,7 @@ export default function EvidenFormPage() {
     };
 
     const handleCancel = () => {
-        const goBack = () => router.push(urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
+        const goBack = () => router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         if (sessionStorage.getItem('unsavedChanges') === 'true') {
             if (window.confirm("Perubahan belum disimpan. Yakin ingin membatalkan?")) {
                 sessionStorage.removeItem('unsavedChanges');
@@ -259,26 +288,51 @@ export default function EvidenFormPage() {
     if (userLoading || isProdiLoading || isFetchingDetail) return <div className="p-8 text-gray-500 font-medium flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin"/> Memuat form eviden...</div>;
     if (!user) return null;
 
-    // Menentukan Kriteria Berdasarkan Prodi Aktif
     const kriteriaList = isInfokom(activeProdi?.abbreviation) ? KRITERIA_LAM_INFOKOM : KRITERIA_LAM_TEKNIK;
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-12">
             <header className="flex justify-between items-center mb-8 border-b border-gray-200 pb-6 sticky top-0 bg-gray-50 z-20">
-                <div>
-                    <Button variant="ghost" onClick={handleCancel} className="text-blue-600 hover:bg-blue-50 px-0 mb-1 gap-2 font-bold text-sm">
-                        &larr; Kembali ke Daftar Eviden
-                    </Button>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        {mode === 'add' ? 'Tambah Eviden Baru' : mode === 'edit' ? 'Edit Eviden' : 'Detail Eviden'}
-                    </h1>
+                <div className="flex items-center gap-4">
+                    <div>
+                        <Button variant="ghost" onClick={handleCancel} className="text-blue-600 hover:bg-blue-50 px-0 mb-1 gap-2 font-bold text-sm">
+                            &larr; Kembali ke Daftar Eviden
+                        </Button>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                {mode === 'add' ? 'Tambah Eviden Baru' : mode === 'edit' ? 'Edit Eviden' : 'Detail Eviden'}
+                            </h1>
+                            {mode !== 'add' && (
+                                <span className={cn("text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5", isLocked ? "bg-amber-100 text-amber-800" : "bg-gray-200 text-gray-700")}>
+                                    {isLocked ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>}
+                                    {formData.status}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
+
                 <div className="flex items-center gap-3">
-                    {isViewOnly && user.role !== 'SUPER_ADMIN' && user.role !== 'PIMPINAN' ? (
+                    {/* TOMBOL TOGGLE STATUS (Hanya untuk Admin/Kaprodi di mode view/edit) */}
+                    {mode !== 'add' && canToggleLock && (
+                        <Button 
+                            onClick={handleToggleStatus} 
+                            variant="outline" 
+                            className={cn("gap-2 font-bold", isLocked ? "border-amber-200 text-amber-600 hover:bg-amber-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50")}
+                        >
+                            {isLocked ? <><Unlock className="w-4 h-4"/> Buka Kunci</> : <><Lock className="w-4 h-4"/> Finalisasi Dokumen</>}
+                        </Button>
+                    )}
+
+                    {/* TOMBOL EDIT (Hanya muncul jika belum terkunci dan bukan admin) */}
+                    {mode === 'view' && !isAdmin && !isLocked && (
                         <Button onClick={() => router.push(`/eviden/form?mode=edit&id=${evidenId}${urlProdiId ? `&prodiId=${urlProdiId}` : ''}`)} className="bg-gray-900 text-white hover:bg-gray-800 gap-2 font-bold shadow-md">
                             <Edit className="w-4 h-4" /> Mulai Edit
                         </Button>
-                    ) : !isViewOnly ? (
+                    )}
+
+                    {/* TOMBOL SIMPAN (Hanya muncul jika di mode edit/add dan tidak terkunci) */}
+                    {mode !== 'view' && !isLocked && !isAdmin && (
                         <>
                             <Button variant="outline" onClick={handleCancel} disabled={isSaving} className="font-bold border-gray-300 text-gray-700">
                                 Batal / Discard
@@ -288,9 +342,15 @@ export default function EvidenFormPage() {
                                 {isSaving ? "Menyimpan..." : "Simpan Eviden"}
                             </Button>
                         </>
-                    ) : null}
+                    )}
                 </div>
             </header>
+
+            {isLocked && (
+                <div className="bg-amber-50 text-amber-800 p-4 rounded-xl text-sm flex items-center gap-3 font-medium border border-amber-200 mb-6 shadow-sm">
+                    <Lock className="w-5 h-5 shrink-0" /> Dokumen Eviden ini berstatus FINAL dan terkunci. Seluruh input telah dimatikan.
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                 

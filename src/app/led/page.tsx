@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X, PenLine, ChevronDown } from "lucide-react";
+import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, ChevronRight, BookOpen, Eye, Trash2, AlertTriangle, X, PenLine, ChevronDown, Lock, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
 import { useUser } from "@/hooks/useUser";
@@ -109,8 +109,9 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
     const { user } = useUser();
     const [prodiName, setProdiName] = useState<string>("Memuat Nama Prodi...");
     
-    // Identifikasi Admin
+    // Identifikasi Role dan Akses Locking
     const isAdmin = user?.role === 'SUPER_ADMIN';
+    const canToggleLock = user?.role === 'SUPER_ADMIN' || (user?.role === 'KAPRODI' && user?.prodiId === targetProdiId);
 
     // State Periode, History, Preview
     const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
@@ -307,6 +308,19 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
         }
     };
 
+    // Handler Toggle Status (Finalisasi/Draft)
+    const handleToggleStatus = async (id: string, currentStatus: string) => {
+        const target = currentStatus === 'DRAFT' ? 'FINAL' : 'DRAFT';
+        if (!confirm(`Yakin ingin mengubah status dokumen ini menjadi ${target}?`)) return;
+        try {
+            await apiClient.put(`/led/document/status/${id}`, { status: target });
+            alert(`Status dokumen berhasil diubah menjadi ${target}`);
+            fetchHistory();
+        } catch (error: any) {
+            alert(error?.response?.data?.message || "Terjadi kesalahan saat mengubah status.");
+        }
+    };
+
     // Handler Hapus
     const closeDeleteModal = () => {
         setDeleteModal({ isOpen: false, type: 'single' });
@@ -457,7 +471,7 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
                                     <div className="flex items-center gap-2">
                                         <span className={cn("text-[11px] font-medium whitespace-nowrap ml-2", isLatest ? "text-green-600" : "text-gray-500")}>{formatDate(item.createdAt)}</span>
                                         {/* Tombol Delete Single (Hanya Admin) */}
-                                        {isAdmin && (
+                                        {isAdmin && item.status !== 'FINAL' && (
                                         <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, type: 'single', doc: item }); }} className="text-gray-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100">
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
@@ -466,6 +480,25 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
                                 </div>
                                 <p className="text-[11px] text-gray-600 truncate">Oleh: {item.pengunggah?.name || "Tidak diketahui"}</p>
                                 <p className="text-[10px] text-gray-400 mt-1 truncate">{item.name} • {formatBytes(item.ukuran)}</p>
+                                
+                                {/* UI BADGE STATUS & TOMBOL LOCKING */}
+                                <div className="flex items-center justify-between border-t border-gray-50 pt-2 mt-2">
+                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded flex items-center w-max gap-1", item.status === 'FINAL' ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600")}>
+                                        {item.status === 'FINAL' ? <Lock className="w-2.5 h-2.5"/> : <Unlock className="w-2.5 h-2.5"/>}
+                                        {item.status || 'DRAFT'}
+                                    </span>
+                                    {canToggleLock && (
+                                        <Button 
+                                            size="sm" 
+                                            variant="ghost" 
+                                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(item.id, item.status || 'DRAFT'); }} 
+                                            className={cn("h-6 px-2 text-[10px] font-bold", item.status === 'FINAL' ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50" : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50")}
+                                        >
+                                            {item.status === 'FINAL' ? "Buka Kunci" : "Finalisasi"}
+                                        </Button>
+                                    )}
+                                </div>
+
                             </div>
                         </div>
                     );
@@ -486,10 +519,11 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
                         </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-4">
-                        {/* BADGE STATUS DOKUMEN */}
+                        {/* BADGE STATUS DOKUMEN DI PREVIEW */}
                         {activeDoc && (
-                        <span className={cn("px-3 py-1.5 text-[11px] font-bold rounded-md border tracking-wide uppercase shadow-sm", activeDoc.status === 'FINAL' ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-700 border-green-200")}>
-                            {activeDoc.status}
+                        <span className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md border flex items-center gap-1.5 shadow-sm", activeDoc.status === 'FINAL' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200")}>
+                            {activeDoc.status === 'FINAL' ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>}
+                            {activeDoc.status || 'DRAFT'}
                         </span>
                         )}
                         <Button variant="outline" onClick={handleDownload} disabled={!activeDocumentId} className="rounded-lg h-9 text-xs font-bold text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm gap-2">

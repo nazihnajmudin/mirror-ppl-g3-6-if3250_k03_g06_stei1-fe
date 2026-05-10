@@ -10,7 +10,9 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TextAlign from "@tiptap/extension-text-align";
 import UnderlineExtension from "@tiptap/extension-underline";
-import {Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Heading1, Heading2, Save, CheckCircle2, Clock, ArrowLeft, FileText, ChevronDown, ChevronRight, Download, History, Undo2, Redo2, Plus, Minus, Trash2} from "lucide-react";
+import ImageResize from "tiptap-extension-resize-image";
+import Link from "@tiptap/extension-link";
+import {Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Heading1, Heading2, Save, CheckCircle2, Clock, ArrowLeft, FileText, ChevronDown, ChevronRight, Download, History, Undo2, Redo2, Plus, Minus, Trash2, ImageIcon, Link as LinkIcon, Unlink, Lock, Unlock} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
@@ -487,8 +489,8 @@ const ALL_SECTIONS: NavSection[] = [
     })
   ),
   { key: "bab3",    label: "Program Pengembangan Berkelanjutan", groupId: "bab3",    groupLabel: "BAB III · Pengembangan Berkelanjutan", template: TEMPLATES.bab3 },
-  { key: "bab4",    label: "Penutup",                            groupId: "bab4",    groupLabel: "BAB IV · Penutup",                     template: TEMPLATES.bab4 },
-  { key: "lampiran",label: "Lampiran",                           groupId: "lampiran",groupLabel: "Lampiran",                             template: TEMPLATES.lampiran },
+  { key: "bab4",    label: "Penutup",                            groupId: "bab4",    groupLabel: "BAB IV · Penutup",                    template: TEMPLATES.bab4 },
+  { key: "lampiran",label: "Lampiran",                           groupId: "lampiran",groupLabel: "Lampiran",                            template: TEMPLATES.lampiran },
 ];
 
 const SIDEBAR_GROUPS = (() => {
@@ -505,7 +507,7 @@ const SIDEBAR_GROUPS = (() => {
 const EMPTY_CONTENT = ["", "<p></p>"];
 const hasContent = (html: string) => !EMPTY_CONTENT.includes((html ?? "").trim());
 
-function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+function EditorToolbar({ editor, onUploadImage }: { editor: ReturnType<typeof useEditor> | null; onUploadImage: () => void }) {
   if (!editor) return null;
   const btn = (active: boolean, disabled = false) =>
     cn("p-1.5 rounded text-gray-600 hover:bg-gray-200 transition-colors",
@@ -514,34 +516,39 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null
   const prevent = (e: React.MouseEvent) => e.preventDefault();
   const sep = <div className="w-px h-5 bg-gray-300 mx-1" />;
   const isInTable = editor.isActive("table");
+  const isLink = editor.isActive("link");
+
+  const handleSetLink = () => {
+    const prev = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Masukkan URL:", prev ?? "https://");
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+    editor.chain().focus().setLink({ href: url, target: "_blank" }).run();
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-gray-200 bg-gray-50/50 shrink-0">
-      {/* Undo / Redo */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className={btn(false, !editor.can().undo())} title="Undo"><Undo2 className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className={btn(false, !editor.can().redo())} title="Redo"><Redo2 className="w-4 h-4" /></button>
       {sep}
-      {/* Headings */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={btn(editor.isActive("heading", { level: 1 }))} title="Heading 1"><Heading1 className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={btn(editor.isActive("heading", { level: 2 }))} title="Heading 2"><Heading2 className="w-4 h-4" /></button>
       {sep}
-      {/* Inline formatting */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleBold().run()} className={btn(editor.isActive("bold"))} title="Bold"><Bold className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleItalic().run()} className={btn(editor.isActive("italic"))} title="Italic"><Italic className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleUnderline().run()} className={btn(editor.isActive("underline"))} title="Underline"><UnderlineIcon className="w-4 h-4" /></button>
       {sep}
-      {/* Lists */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleBulletList().run()} className={btn(editor.isActive("bulletList"))} title="Bullet List"><List className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive("orderedList"))} title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
       {sep}
-      {/* Alignment */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("left").run()} className={btn(editor.isActive({ textAlign: "left" }))} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("center").run()} className={btn(editor.isActive({ textAlign: "center" }))} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().setTextAlign("right").run()} className={btn(editor.isActive({ textAlign: "right" }))} title="Align Right"><AlignRight className="w-4 h-4" /></button>
       {sep}
-      {/* Insert table */}
       <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className={btn(false)} title="Sisipkan Tabel"><TableIcon className="w-4 h-4" /></button>
-      {/* Table operations — hanya muncul saat kursor di dalam tabel */}
       {isInTable && (<>
         {sep}
         <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().addRowBefore().run()} className={btn(false)} title="Tambah baris di atas"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Plus className="w-3 h-3" />Baris↑</span></button>
@@ -554,6 +561,13 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null
         {sep}
         <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().deleteTable().run()} className={cn(btn(false), "text-red-500 hover:bg-red-50")} title="Hapus tabel"><span className="flex items-center gap-0.5 text-[10px] font-medium"><Trash2 className="w-3 h-3" />Tabel</span></button>
       </>)}
+      {sep}
+      <button type="button" onMouseDown={prevent} onClick={handleSetLink} className={btn(isLink)} title={isLink ? "Edit link" : "Sisipkan link"}><LinkIcon className="w-4 h-4" /></button>
+      {isLink && (
+        <button type="button" onMouseDown={prevent} onClick={() => editor.chain().focus().unsetLink().run()} className={btn(false)} title="Hapus link"><Unlink className="w-4 h-4" /></button>
+      )}
+      {sep}
+      <button type="button" onMouseDown={prevent} onClick={(e) => { e.preventDefault(); onUploadImage(); }} className={btn(false)} title="Upload Foto"><ImageIcon className="w-4 h-4" /></button>
     </div>
   );
 }
@@ -563,6 +577,7 @@ interface FormVersion {
   createdAt: Date;
   periode: string;
   createdByName?: string;
+  status?: string; 
 }
 
 function LEDFormContent() {
@@ -589,16 +604,30 @@ function LEDFormContent() {
   const [isExporting, setIsExporting] = useState(false);
   const [versions, setVersions] = useState<FormVersion[]>([]);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+  
+  const [status, setStatus] = useState<string>("DRAFT");
+  
   const [showHistory, setShowHistory] = useState(false);
   const [activePeriode, setActivePeriode] = useState<string>(new Date().getFullYear().toString());
   const [availablePeriods, setAvailablePeriods] = useState<string[]>([new Date().getFullYear().toString()]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   const handleSaveRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const handleAutoSaveRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const activeSection = ALL_SECTIONS.find((s) => s.key === activeKey) ?? ALL_SECTIONS[0];
   const activeSectionIndex = ALL_SECTIONS.findIndex((s) => s.key === activeKey);
   const activeGroup = SIDEBAR_GROUPS.find((g) => g.id === activeSection.groupId);
+
+  const isLocked = status === 'FINAL';
+  const isGuestRole = user?.role === "PIMPINAN" || user?.role === "SUPER_ADMIN";
+  const canEditRole = user?.role === "KAPRODI" || user?.role === "TIM_PRODI";
+  const canEdit = canEditRole && !isLocked;
+  const canToggleLock = activeVersionId && (user?.role === 'SUPER_ADMIN' || (user?.role === 'KAPRODI' && user?.prodiId === prodiId));
 
   useEffect(() => {
     if (!prodiIdParam && user?.prodiId) setProdiId(user.prodiId);
@@ -622,15 +651,19 @@ function LEDFormContent() {
           createdAt: new Date(v.createdAt),
           periode: v.periode,
           createdByName: v.createdBy?.name,
+          status: v.status || 'DRAFT'
         }));
         setVersions(mapped);
         setAvailablePeriods((prev) => {
           const allPeriods = new Set([...prev, ...data.map((v) => v.periode)]);
           return Array.from(allPeriods).sort();
         });
+        
         if (mapped.length > 0) {
           const latestId = mapped[0].id;
           setActiveVersionId(latestId);
+          setStatus(mapped[0].status || 'DRAFT');
+          
           try {
             const vRes = await apiClient.get(`/led/form/${latestId}`);
             const raw = vRes.data.data?.content;
@@ -639,12 +672,12 @@ function LEDFormContent() {
           } catch { /* silently fail, template defaults will show */ }
         } else {
           setActiveVersionId(null);
+          setStatus('DRAFT');
         }
       })
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
   }, [prodiId, activePeriode]);
-
 
   const editor = useEditor({
     extensions: [
@@ -653,16 +686,23 @@ function LEDFormContent() {
       Table.configure({ resizable: true }),
       TableRow, TableCell, TableHeader,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      ImageResize,
+      Link.configure({ openOnClick: false, HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" } }),
     ],
     content: content[activeKey] ?? "",
+    editable: canEdit,
     immediatelyRender: false,
     editorProps: { attributes: { class: "tiptap" } },
     onUpdate: () => {
       setSaveStatus("idle");
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-      autoSaveTimer.current = setTimeout(() => handleSaveRef.current(), 3000);
+      autoSaveTimer.current = setTimeout(() => handleAutoSaveRef.current(), 3000);
     },
   });
+
+  useEffect(() => {
+    if (editor) editor.setEditable(canEdit);
+  }, [canEdit, editor]);
 
   const handleSelectSection = useCallback(
     (key: string) => {
@@ -680,13 +720,18 @@ function LEDFormContent() {
       const parsed: Record<string, string> = typeof raw === "string" ? JSON.parse(raw) : (raw ?? {});
       setContent((prev) => ({ ...prev, ...parsed }));
       if (editor) editor.commands.setContent(parsed[activeKey] ?? "", { emitUpdate: false });
+      
       setActiveVersionId(versionId);
+      
+      const loadedVersion = versions.find(v => v.id === versionId);
+      if (loadedVersion) setStatus(loadedVersion.status || 'DRAFT');
+      
       setShowHistory(false);
       toast({ title: "Versi dimuat", description: "Konten versi yang dipilih berhasil dimuat ke editor." });
     } catch {
       toast({ variant: "destructive", title: "Gagal memuat versi", description: "Terjadi kesalahan." });
     }
-  }, [editor, activeKey, toast]);
+  }, [editor, activeKey, toast, versions]);
 
   useEffect(() => {
     if (!editor) return;
@@ -696,8 +741,28 @@ function LEDFormContent() {
     }
   }, [activeKey, editor]); 
 
+  const handleAutoSave = useCallback(async () => {
+    if (!editor || !prodiId || !canEdit) return;
+    if (!activeVersionId) {
+      return handleSaveRef.current(); 
+    }
+    const html = editor.getHTML();
+    const allContent = { ...content, [activeKey]: html };
+    setContent(allContent);
+    setSaveStatus("saving");
+    try {
+      await apiClient.put(`/led/form/version/${activeVersionId}`, {
+        content: JSON.stringify(allContent),
+      });
+      setLastSavedAt(new Date());
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("idle");
+    }
+  }, [editor, prodiId, activeKey, content, activeVersionId, canEdit]);
+
   const handleSave = useCallback(async () => {
-    if (!editor || !prodiId) return;
+    if (!editor || !prodiId || !canEdit) return;
     const html = editor.getHTML();
     const allContent = { ...content, [activeKey]: html };
     setContent(allContent);
@@ -714,19 +779,57 @@ function LEDFormContent() {
         createdAt: new Date(v.createdAt),
         periode: v.periode,
         createdByName: v.createdBy?.name,
+        status: v.status || 'DRAFT'
       };
       setVersions((prev) => [newVersion, ...prev]);
       setActiveVersionId(newVersion.id);
+      setStatus(newVersion.status || 'DRAFT');
       setLastSavedAt(new Date());
       setSaveStatus("saved");
+      toast({ title: "Versi Baru Dibuat", description: "Form LED disimpan sebagai versi draft baru." });
     } catch {
       setSaveStatus("idle");
       toast({ variant: "destructive", title: "Gagal menyimpan", description: "Terjadi kesalahan. Coba lagi." });
     }
-  }, [editor, prodiId, activeKey, activePeriode, content, toast]);
+  }, [editor, prodiId, activeKey, activePeriode, content, toast, canEdit]);
+
+  const handleToggleStatus = async () => {
+    if (!activeVersionId) return;
+    const target = status === 'DRAFT' ? 'FINAL' : 'DRAFT';
+    if (!confirm(`Yakin ingin mengubah status form ini menjadi ${target}?`)) return;
+    try {
+      await apiClient.put(`/led/form/status/${activeVersionId}`, { status: target });
+      setStatus(target);
+      setVersions(prev => prev.map(v => v.id === activeVersionId ? { ...v, status: target } : (target === 'FINAL' ? {...v, status: 'DRAFT'} : v)));
+      toast({ title: "Berhasil", description: `Status diubah menjadi ${target}` });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Gagal", description: error?.response?.data?.message || "Terjadi kesalahan saat mengubah status." });
+    }
+  };
 
   useEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
+  useEffect(() => { handleAutoSaveRef.current = handleAutoSave; }, [handleAutoSave]);
   useEffect(() => () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); }, []);
+
+  const handleUploadImage = useCallback(async (file: File) => {
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await apiClient.post("/led/upload/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const url: string = res.data.data?.url;
+      if (url && editor) {
+        editor.chain().focus().setImage({ src: url }).run();
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Upload Gagal", description: "Gagal mengunggah gambar. Coba lagi." });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, [editor, toast]);
 
   const handleExport = useCallback(async () => {
     if (!prodiId) return;
@@ -782,8 +885,6 @@ function LEDFormContent() {
   if (loading) return <div className="p-8 text-gray-500">Memuat otorisasi...</div>;
   if (!user) return null;
 
-  const canEdit = user.role === "KAPRODI" || user.role === "TIM_PRODI";
-
   if (!prodiId) {
     return <div className="p-8 text-red-500 font-bold">Program Studi tidak ditemukan. Pastikan Anda terdaftar di sebuah Program Studi.</div>;
   }
@@ -804,7 +905,10 @@ function LEDFormContent() {
           <div className="flex items-center space-x-3">
             <FileText className="w-6 h-6 text-blue-600" />
             <div>
-              <h1 className="text-base font-bold text-gray-800">LED Formulir Narasi</h1>
+              <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                LED Formulir Narasi
+                {isLocked && <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded flex items-center gap-1"><Lock className="w-3 h-3"/> FINAL</span>}
+              </h1>
               <p className="text-xs text-gray-500">{prodiName} · LAM Teknik</p>
             </div>
           </div>
@@ -862,8 +966,10 @@ function LEDFormContent() {
                           {idx === 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Clock className="w-3.5 h-3.5 text-gray-400" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-800">
-                            Versi {versions.length - idx} {idx === 0 && <span className="text-green-600">(Terbaru)</span>}
+                          <p className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                            Versi {versions.length - idx} 
+                            {idx === 0 && <span className="text-green-600">(Terbaru)</span>}
+                            {v.status === 'FINAL' && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[9px] font-bold">FINAL</span>}
                           </p>
                           <p className="text-[11px] text-gray-500 mt-0.5">
                             {v.createdAt.toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
@@ -887,6 +993,13 @@ function LEDFormContent() {
             <Download className="w-4 h-4" />
             {isExporting ? "Mengunduh..." : "Unduh Word"}
           </Button>
+
+          {canToggleLock && (
+              <Button onClick={handleToggleStatus} variant="outline" className={cn("gap-2 text-sm px-4 py-2 font-medium", isLocked ? "text-amber-600 border-amber-200 hover:bg-amber-50" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50")}>
+                  {isLocked ? <><Unlock className="w-4 h-4"/> Buka Kunci</> : <><Lock className="w-4 h-4"/> Finalisasi Form</>}
+              </Button>
+          )}
+
           {canEdit && (
             <Button
               onClick={handleSave}
@@ -894,11 +1007,17 @@ function LEDFormContent() {
               className="flex items-center px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-400 gap-2"
             >
               <Save className="w-4 h-4" />
-              {saveStatus === "saving" ? "Menyimpan..." : "Simpan"}
+              {saveStatus === "saving" ? "Menyimpan..." : "Simpan Versi Baru"}
             </Button>
           )}
         </div>
       </header>
+
+      {isLocked && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 text-xs font-bold text-amber-800 flex items-center gap-2 shrink-0">
+              <Lock className="w-4 h-4 shrink-0"/> Dokumen LED Form ini berstatus FINAL dan terkunci. Anda hanya dapat melihat Preview.
+          </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-72 flex flex-col border-r bg-white shrink-0 overflow-hidden">
@@ -1005,7 +1124,7 @@ function LEDFormContent() {
           </nav>
         </aside>
 
-        <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        <main className="flex-1 flex flex-col overflow-hidden bg-white relative">
           <div className="px-6 py-2.5 border-b border-gray-100 shrink-0 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-500">{activeGroup?.label}</span>
             {!activeGroup?.isCriteria || activeGroup.sections.length > 1 ? (
@@ -1017,7 +1136,24 @@ function LEDFormContent() {
             {!canEdit && <span className="text-xs text-amber-600 ml-2">(read-only)</span>}
           </div>
 
-          {canEdit && <EditorToolbar editor={editor} />}
+          {canEdit && <EditorToolbar editor={editor} onUploadImage={() => imageInputRef.current?.click()} />}
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUploadImage(file);
+              e.target.value = "";
+            }}
+          />
+          {isUploadingImage && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+              <span className="text-sm text-blue-600 font-medium animate-pulse">Mengunggah gambar...</span>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto p-6 max-w-4xl w-full mx-auto">
             <EditorContent

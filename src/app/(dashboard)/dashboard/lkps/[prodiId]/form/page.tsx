@@ -8,7 +8,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/lib/api-client";
 import LKPSFormBuilder from "@/components/lkps/form-builder";
+import { useUser } from "@/hooks/useUser";
 
 interface SheetData {
   sheetName: string;
@@ -46,6 +48,7 @@ export default function LKPSFormPage({
   const documentId = searchParams.get('documentId');
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
 
   // State
   const [sheets, setSheets] = useState<SheetData[]>([]);
@@ -55,6 +58,7 @@ export default function LKPSFormPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   const currentSheet = sheets[currentSheetIndex];
 
@@ -65,6 +69,13 @@ export default function LKPSFormPage({
     const loadSheets = async () => {
       try {
         setLoading(true);
+
+        const docRes = await apiClient.get(`/lkps/${documentId}`);
+        if (docRes.data?.data?.status === 'FINAL') {
+           setIsLocked(true);
+           return; // Hentikan proses load jika dokumen sudah dikunci
+        }
+
         const res = await apiClient.get(`/lkps/document/${documentId}/sheets`);
         setSheets(res.data.data.sheets);
       } catch (error: any) {
@@ -244,6 +255,24 @@ export default function LKPSFormPage({
     );
   }
 
+  // BOUNCER UI JIKA STATUS FINAL
+  if (isLocked) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[60vh] text-center max-w-lg mx-auto p-4">
+        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+          <Lock className="w-10 h-10" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Akses Ditolak</h2>
+        <p className="text-gray-600 mb-8 leading-relaxed">
+          Dokumen LKPS ini telah dikunci (FINAL). Anda tidak dapat mengakses atau memodifikasi form ini. Silakan buka kunci terlebih dahulu melalui menu manajemen.
+        </p>
+        <Button onClick={() => router.push(`/dashboard/lkps/${prodiId}`)} className="bg-gray-900 hover:bg-gray-800 text-white gap-2 font-bold px-8 shadow-md">
+          <ArrowLeft className="w-4 h-4" /> Kembali ke Manajemen LKPS
+        </Button>
+      </div>
+    );
+  }
+
   if (sheets.length === 0) {
     return (
       <div className="p-8">
@@ -266,6 +295,8 @@ export default function LKPSFormPage({
 
   const completedCount = sheets.filter(s => s.isCompleted).length;
   const progressPercent = Math.round((completedCount / sheets.length) * 100);
+
+  const canFinalize = user?.role === 'SUPER_ADMIN' || (user?.role === 'KAPRODI' && user?.prodiId === prodiId);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -301,15 +332,17 @@ export default function LKPSFormPage({
               {saving ? "Menyimpan..." : "Simpan Draft"}
             </Button>
 
-            <Button
-              size="sm"
-              onClick={handleFinalize}
-              disabled={saving}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              {saving ? "Memproses..." : "Finalisasi"}
-            </Button>
+            {canFinalize && (
+              <Button
+                size="sm"
+                onClick={handleFinalize}
+                disabled={saving}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                {saving ? "Memproses..." : "Finalisasi"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
