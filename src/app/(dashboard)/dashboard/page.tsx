@@ -26,46 +26,21 @@ export default function InstitusiDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadProdis = async () => {
+    const loadDashboardData = async () => {
       setLoading(true)
       setError(null)
       try {
-        const response = await apiClient.get<ApiResponse<ProdiOption[]>>("/prodi")
-        const prodiList = response.data.data || []
-        
-        // Fetch dashboard data for each prodi
-        const prodiWithDashboard = await Promise.all(
-          prodiList.map(async (prodi) => {
-            try {
-              const dashboardRes = await apiClient.get(`/prodi/${prodi.id}/dashboard`)
-              const dashboardData = dashboardRes.data.data
-              const score = dashboardData?.simulationScore || 0
-              return {
-                ...prodi,
-                dashboard: dashboardData,
-                status:
-                  score >= 361 ? ("completed" as const) : ("in_progress" as const),
-              }
-            } catch (err) {
-              // If dashboard fetch fails, return prodi without dashboard data
-              return {
-                ...prodi,
-                status: "in_progress" as const,
-              }
-            }
-          })
-        )
-        
-        setProdis(prodiWithDashboard)
+        const response = await apiClient.get<ApiResponse<ProdiWithDashboard[]>>("/prodi/dashboard/summary")
+        setProdis(response.data.data || [])
       } catch (err: unknown) {
-        const message = getErrorMessage(err) || "Gagal memuat data program studi"
+        const message = getErrorMessage(err) || "Gagal memuat data ringkasan dashboard"
         setError(message)
       } finally {
         setLoading(false)
       }
     }
 
-    loadProdis()
+    loadDashboardData()
   }, [])
 
   // Separate prodis by status

@@ -36,69 +36,37 @@ export default function DashboardProdiPage() {
     getCurrentUser().then(setCurrentUser).catch(() => {})
   }, [])
 
-  useEffect(() => {
-    if (!mounted) return
-    const loadDashboard = async () => {
-      if (!prodiId) {
-        setError("ID Program Studi tidak diberikan")
-        setLoading(false)
-        return
-      }
-      try {
-        const response = await apiClient.get<ApiResponse<DashboardData>>(`/prodi/${prodiId}/dashboard`)
-        setDashboard(response.data.data || null)
-        if (response.data.data?.accessInfo?.isReadOnly) setEditMode(false)
-        setError(null)
-      } catch (err: unknown) {
-        setError(getErrorMessage(err) || "Gagal memuat dashboard prodi")
-      } finally {
-        setLoading(false)
-      }
+  const loadDashboard = useCallback(async () => {
+    if (!prodiId) {
+      setError("ID Program Studi tidak diberikan")
+      setLoading(false)
+      return
     }
-    loadDashboard()
-  }, [prodiId, mounted])
+    try {
+      setLoading(dashboard === null) // Only show full loader on first load
+      const response = await apiClient.get<ApiResponse<DashboardData>>(`/prodi/${prodiId}/dashboard`)
+      setDashboard(response.data.data || null)
+      if (response.data.data?.accessInfo?.isReadOnly) setEditMode(false)
+      setError(null)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || "Gagal memuat dashboard prodi")
+    } finally {
+      setLoading(false)
+    }
+  }, [prodiId, dashboard])
+
+  useEffect(() => {
+    if (mounted) {
+      loadDashboard()
+    }
+  }, [prodiId, mounted, loadDashboard])
 
   useEffect(() => {
     if (!dashboard || selectedTemplate !== null) return
     setSelectedTemplate(dashboard.lamTemplate === 'INFOKOM' ? 'lam-infokom' : 'lam-teknik')
   }, [dashboard, selectedTemplate])
 
-  useEffect(() => {
-    if (!prodiId || !mounted || !selectedTemplate) return
-    setFormContentLoading(true)
-    setFormContent({})
-    const year = new Date().getFullYear().toString()
-    const tmpl = selectedTemplate === 'lam-infokom' ? 'INFOKOM' : 'LAM_TEKNIK'
-    const fetchContent = async () => {
-      try {
-        const res = await apiClient.get(`/led/form/history/${prodiId}/${year}?template=${tmpl}`)
-        const latest = res.data.data?.[0]
-        if (!latest?.id) return
-        const versionRes = await apiClient.get(`/led/form/${latest.id}`)
-        const raw = versionRes.data.data?.content
-        const parsed: Record<string, string> = typeof raw === 'string' ? JSON.parse(raw) : (raw ?? {})
-        setFormContent(parsed)
-      } catch { /* silently fail */ } finally {
-        setFormContentLoading(false)
-      }
-    }
-    fetchContent()
-  }, [prodiId, mounted, selectedTemplate])
-
-  useEffect(() => {
-    if (!mounted) return
-    const loadMyProdis = async () => {
-      try {
-        const response = await apiClient.get<ApiResponse<any[]>>("/prodi/my-prodi")
-        setMyProdis(response.data.data || [])
-      } catch (err: unknown) {
-        console.error("Error loading prodis:", err)
-      }
-    }
-    loadMyProdis()
-  }, [mounted])
-
-  const refreshFormContent = React.useCallback(async () => {
+  const refreshFormContent = useCallback(async () => {
     if (!prodiId || !selectedTemplate) return
     setFormContentLoading(true)
     const year = new Date().getFullYear().toString()
@@ -111,6 +79,10 @@ export default function DashboardProdiPage() {
       const raw = vRes.data.data?.content
       const parsed: Record<string, string> = typeof raw === 'string' ? JSON.parse(raw) : (raw ?? {})
       setFormContent(parsed)
+      
+      // Also refresh dashboard summary
+      const dashboardRes = await apiClient.get<ApiResponse<DashboardData>>(`/prodi/${prodiId}/dashboard`)
+      setDashboard(dashboardRes.data.data || null)
     } catch { /* silently fail */ } finally { setFormContentLoading(false) }
   }, [prodiId, selectedTemplate])
 

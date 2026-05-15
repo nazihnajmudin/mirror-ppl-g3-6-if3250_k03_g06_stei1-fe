@@ -756,6 +756,7 @@ function LEDFormContent() {
       });
       setLastSavedAt(new Date());
       setSaveStatus("saved");
+      router.refresh();
     } catch {
       setSaveStatus("idle");
     }
@@ -786,6 +787,7 @@ function LEDFormContent() {
       setStatus(newVersion.status || 'DRAFT');
       setLastSavedAt(new Date());
       setSaveStatus("saved");
+      router.refresh();
       toast({ title: "Versi Baru Dibuat", description: "Form LED disimpan sebagai versi draft baru." });
     } catch {
       setSaveStatus("idle");
