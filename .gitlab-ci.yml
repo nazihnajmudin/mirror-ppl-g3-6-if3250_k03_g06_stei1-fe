@@ -50,4 +50,4 @@ deploy_to_vercel:
     VERCEL_ORG_ID: $VERCEL_ORG_ID
     VERCEL_PROJECT_ID: $VERCEL_PROJECT_ID
   only:
-    - main
+    - develop
