@@ -1,6 +1,11 @@
+image: docker:24.0.5
+
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
+
+services:
+  - docker:24.0.5-dind
 
 stages:
   - build
@@ -9,13 +14,13 @@ stages:
 
 cache:
   paths:
+    - .next/cache/
     - node_modules/
 
-build-job:
+build-frontend:
   stage: build
   image: node:20-alpine
-  tags: 
-    - docker
+  tags: [docker]
   script:
     - npm ci
     - npm run build
@@ -24,26 +29,25 @@ build-job:
     paths:
       - .next/
       - public/
-      - package.json
 
-run_tests:
+lint-frontend:
   stage: test
   image: node:20-alpine
-  tags:
-    - docker
+  tags: [docker]
   script:
-    - npm test
+    - npm ci
+    - npm run lint
 
-deploy-job:
+deploy_to_vercel:
   stage: deploy
-  image: docker:24.0.5
-  services:
-    - docker:24.0.5-dind
-  tags: 
-    - docker
-  environment: production
+  image: node:20-alpine
+  needs: ["build-frontend"] 
   script:
-    - docker compose down --remove-orphans
-    - docker compose up -d --build
+    - npm install -g vercel
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+  variables:
+    VERCEL_TOKEN: $VERCEL_TOKEN
+    VERCEL_ORG_ID: $VERCEL_ORG_ID
+    VERCEL_PROJECT_ID: $VERCEL_PROJECT_ID
   only:
     - main
