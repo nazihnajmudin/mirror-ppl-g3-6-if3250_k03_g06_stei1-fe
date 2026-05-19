@@ -59,6 +59,7 @@ export default function ManajemenSertifikatPage() {
 
   const [editing, setEditing] = useState<ProdiWithAccreditation | null>(null);
   const [form, setForm] = useState({ grade: "", startDate: "", endDate: "", certificateUrl: "" });
+  const [error, setError] = useState<string | null>(null);
   const [certFile, setCertFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,11 +97,21 @@ export default function ManajemenSertifikatPage() {
       endDate: toInputDate(prodi.accreditation?.endDate),
       certificateUrl: prodi.accreditation?.certificateUrl?.startsWith("http") ? (prodi.accreditation.certificateUrl) : "",
     });
+    setError(null);
   };
 
   const handleSave = async () => {
     if (!editing) return;
+    
+    if (form.startDate && form.endDate) {
+      if (new Date(form.startDate) > new Date(form.endDate)) {
+        setError("Tanggal mulai berlaku tidak boleh melebihi tanggal berakhir");
+        return;
+      }
+    }
+    
     setSaving(true);
+    setError(null);
     try {
       await upsertAccreditation(editing.id, {
         grade: form.grade || undefined,
@@ -246,7 +257,7 @@ export default function ManajemenSertifikatPage() {
                     id="startDate"
                     type="date"
                     value={form.startDate}
-                    onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                    onChange={(e) => { setForm((f) => ({ ...f, startDate: e.target.value })); setError(null); }}
                     className="mt-1"
                   />
                 </div>
@@ -256,11 +267,12 @@ export default function ManajemenSertifikatPage() {
                     id="endDate"
                     type="date"
                     value={form.endDate}
-                    onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                    onChange={(e) => { setForm((f) => ({ ...f, endDate: e.target.value })); setError(null); }}
                     className="mt-1"
                   />
                 </div>
               </div>
+              {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
 
               <div>
                 <Label className="text-sm">Upload File Sertifikat (PDF/JPEG/PNG, maks 10MB)</Label>
