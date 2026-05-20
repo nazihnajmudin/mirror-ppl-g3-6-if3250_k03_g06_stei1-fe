@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Sidebar } from "@/components/layout/sidebar";
-import { SidebarProdi } from "@/components/layout/sidebar-prodi";
 import { Header } from "@/components/layout/header";
 import { HeaderKaprodi } from "@/components/layout/header-kaprodi";
 import { useUser } from "@/hooks/useUser";

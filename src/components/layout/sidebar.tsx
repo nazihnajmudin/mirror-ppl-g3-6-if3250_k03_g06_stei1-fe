@@ -27,20 +27,23 @@ import { useState, useEffect } from "react";
 import apiClient from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
 import { useUser } from "@/hooks/useUser";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const { user } = useUser();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
+
     // Accordion state
     const [expanded, setExpanded] = useState<'umum' | 'prodi' | null>(null);
 
     // Auto-expand accordions based on current path
     useEffect(() => {
-        const umumPaths = ['/manajemen-akun', '/dashboard/manajemen-sertifikat'];
-        const prodiPaths = ['/profil-prodi', '/penugasan'];
+        const umumPaths = ['/manajemen-akun', '/dashboard/manajemen-sertifikat', '/data-institusi'];
+        const prodiPaths = ['/profil-prodi', '/penugasan', '/eviden', '/simulasi-skor'];
         
         if (umumPaths.some(p => pathname.startsWith(p))) {
             setExpanded('umum');
@@ -74,16 +77,26 @@ export function Sidebar() {
     const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
         const hasUnsavedChanges = sessionStorage.getItem('unsavedChanges') === 'true';
         if (hasUnsavedChanges) {
-            const confirmLeave = window.confirm("Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman ini?");
-            if (!confirmLeave) {
-                e.preventDefault(); // Batalkan navigasi
-            } else {
-                sessionStorage.removeItem('unsavedChanges'); // Bersihkan flag jika user setuju pergi
-            }
+            e.preventDefault();
+            setPendingHref(href);
+            setConfirmOpen(true);
         }
     };
 
+    const handleConfirmLeave = () => {
+        sessionStorage.removeItem('unsavedChanges');
+        setConfirmOpen(false);
+        if (pendingHref) router.push(pendingHref);
+        setPendingHref(null);
+    };
+
+    const handleCancelLeave = () => {
+        setConfirmOpen(false);
+        setPendingHref(null);
+    };
+
     const isSuperOrPimpinan = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
+    const isKaprodiOrAbove = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN' || user?.role === 'KAPRODI';
 
     // Style constants
     const globalItemClass = "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 mb-1";
@@ -99,9 +112,19 @@ export function Sidebar() {
     const inactiveSubmenuClass = "text-gray-500 hover:bg-gray-50 hover:text-gray-900";
 
     return (
+        <>
+        <ConfirmDialog
+            open={confirmOpen}
+            title="Tinggalkan halaman?"
+            description="Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman ini?"
+            confirmLabel="Tinggalkan"
+            cancelLabel="Batal"
+            onConfirm={handleConfirmLeave}
+            onCancel={handleCancelLeave}
+        />
         <div className="flex h-screen w-full flex-col border-r bg-white px-4 py-6 shadow-sm overflow-hidden">
             {/* BRANDING */}
-            <Link href="/dashboard" className="mb-8 px-4 flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <Link href={isSuperOrPimpinan ? "/dashboard" : "/prodi-saya"} className="mb-8 px-4 flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
                 <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Portal STEI</h1>
             </Link>
@@ -111,34 +134,30 @@ export function Sidebar() {
                 {/* 1. SHARED ITEMS (MUTUAL) - TOP LEVEL */}
                 <div className="space-y-1">
                     {isSuperOrPimpinan && (
-                        <Link href="/dashboard" className={cn(globalItemClass, (pathname === '/dashboard' || pathname === '/') ? activeGlobalClass : inactiveGlobalClass)}>
+                        <Link href="/dashboard" onClick={(e) => handleNavigation(e, '/dashboard')} className={cn(globalItemClass, (pathname === '/dashboard' || pathname === '/') ? activeGlobalClass : inactiveGlobalClass)}>
                             <LayoutDashboard className="h-4 w-4" />
                             Beranda
                         </Link>
                     )}
-                    <Link href="/prodi-saya" className={cn(globalItemClass, (pathname === '/prodi-saya' || pathname.startsWith('/dashboard-prodi')) ? activeGlobalClass : inactiveGlobalClass)}>
+                    <Link href="/prodi-saya" onClick={(e) => handleNavigation(e, '/prodi-saya')} className={cn(globalItemClass, (pathname === '/prodi-saya' || pathname.startsWith('/dashboard-prodi')) ? activeGlobalClass : inactiveGlobalClass)}>
                         <LayoutDashboard className="h-4 w-4" />
                         Dashboard Prodi
                     </Link>
-                    <Link href="/dashboard/lkps" className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
+                    <Link href="/dashboard/lkps" onClick={(e) => handleNavigation(e, '/dashboard/lkps')} className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
                         <FileSpreadsheet className="h-4 w-4" />
                         LKPS
                     </Link>
-                    <Link href="/led" className={cn(globalItemClass, pathname === '/led' ? activeGlobalClass : inactiveGlobalClass)}>
+                    <Link href="/led" onClick={(e) => handleNavigation(e, '/led')} className={cn(globalItemClass, pathname === '/led' ? activeGlobalClass : inactiveGlobalClass)}>
                         <FileText className="h-4 w-4" />
                         LED
                     </Link>
-                    <Link href="/template-dokumen" className={cn(globalItemClass, pathname.startsWith('/template-dokumen') ? activeGlobalClass : inactiveGlobalClass)}>
+                    <Link href="/template-dokumen" onClick={(e) => handleNavigation(e, '/template-dokumen')} className={cn(globalItemClass, pathname.startsWith('/template-dokumen') ? activeGlobalClass : inactiveGlobalClass)}>
                         <FileText className="h-4 w-4" />
                         Template Dokumen
                     </Link>
                     <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
                         <Activity className="h-4 w-4" />
                         Monitoring & Evaluasi
-                    </Link>
-                    <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
-                        <Download className="h-4 w-4" />
-                        Unduh Laporan/Dokumen
                     </Link>
                 </div>
 
@@ -158,15 +177,15 @@ export function Sidebar() {
                             <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'umum' && "rotate-180")} />
                         </button>
                         <div className={cn("overflow-hidden transition-all duration-300", expanded === 'umum' ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0")}>
-                                <Link href="/manajemen-akun" className={cn(submenuBaseClass, pathname.startsWith('/manajemen-akun') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <Link href="/manajemen-akun" onClick={(e) => handleNavigation(e, '/manajemen-akun')} className={cn(submenuBaseClass, pathname.startsWith('/manajemen-akun') ? activeSubmenuClass : inactiveSubmenuClass)}>
                                 <Users className="h-4 w-4" />
                                 Manajemen Akun
                             </Link>
-                            <Link href="/dashboard/manajemen-sertifikat" className={cn(submenuBaseClass, pathname.startsWith('/dashboard/manajemen-sertifikat') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                            <Link href="/dashboard/manajemen-sertifikat" onClick={(e) => handleNavigation(e, '/dashboard/manajemen-sertifikat')} className={cn(submenuBaseClass, pathname.startsWith('/dashboard/manajemen-sertifikat') ? activeSubmenuClass : inactiveSubmenuClass)}>
                                 <Award className="h-4 w-4" />
                                 Manajemen Sertifikat
                             </Link>
-                            <Link href="/data-institusi" className={cn(submenuBaseClass, pathname.startsWith('/data-institusi') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                            <Link href="/data-institusi" onClick={(e) => handleNavigation(e, '/data-institusi')} className={cn(submenuBaseClass, pathname.startsWith('/data-institusi') ? activeSubmenuClass : inactiveSubmenuClass)}>
                                 <Database className="h-4 w-4" />
                                 Pusat Data Institusi
                             </Link>
@@ -187,29 +206,33 @@ export function Sidebar() {
                         <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", expanded === 'prodi' && "rotate-180")} />
                     </button>
                     <div className={cn("overflow-hidden transition-all duration-300", expanded === 'prodi' ? "max-h-60 opacity-100 mt-1" : "max-h-0 opacity-0")}>
-                        <Link href="/profil-prodi" className={cn(submenuBaseClass, pathname === '/profil-prodi' ? activeSubmenuClass : inactiveSubmenuClass)}>
+                        <Link href="/profil-prodi" onClick={(e) => handleNavigation(e, '/profil-prodi')} className={cn(submenuBaseClass, pathname === '/profil-prodi' ? activeSubmenuClass : inactiveSubmenuClass)}>
                             <User className="h-4 w-4" />
                             Profil Program Studi
                         </Link>
-                        <Link href="/eviden" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
+                        <Link href="/eviden" onClick={(e) => handleNavigation(e, '/eviden')} className={cn(submenuBaseClass, pathname.startsWith('/eviden') ? activeSubmenuClass : inactiveSubmenuClass)}>
                             <FolderOpen className="h-4 w-4" />
                             Dokumen Eviden
                         </Link>
-                        <Link href="/penugasan" className={cn(submenuBaseClass, pathname === '/penugasan' ? activeSubmenuClass : inactiveSubmenuClass)}>
-                            <ClipboardList className="h-4 w-4" />
-                            Penugasan Tim Prodi
-                        </Link>
-                        <Link href="/simulasi-skor" className={cn(submenuBaseClass, inactiveSubmenuClass)}>
-                            <Calculator className="h-4 w-4" />
-                            Simulasi Skor Prodi
-                        </Link>
+                        {isKaprodiOrAbove && (
+                            <Link href="/penugasan" onClick={(e) => handleNavigation(e, '/penugasan')} className={cn(submenuBaseClass, pathname === '/penugasan' ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <ClipboardList className="h-4 w-4" />
+                                Penugasan Tim Prodi
+                            </Link>
+                        )}
+                        {isKaprodiOrAbove && (
+                            <Link href="/simulasi-skor" onClick={(e) => handleNavigation(e, '/simulasi-skor')} className={cn(submenuBaseClass, pathname.startsWith('/simulasi-skor') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                                <Calculator className="h-4 w-4" />
+                                Simulasi Skor Prodi
+                            </Link>
+                        )}
                     </div>
                 </div>
 
                 {/* 4. SHARED BOTTOM ITEMS */}
                 <div className="mt-auto pt-4 space-y-1">
                     {user?.role === 'SUPER_ADMIN' && (
-                        <Link href="/settings" className={cn(globalItemClass, pathname === '/settings' ? activeGlobalClass : inactiveGlobalClass)}>
+                        <Link href="/settings" onClick={(e) => handleNavigation(e, '/settings')} className={cn(globalItemClass, pathname === '/settings' ? activeGlobalClass : inactiveGlobalClass)}>
                             <Settings className="h-4 w-4" />
                             Pengaturan
                         </Link>
@@ -225,5 +248,6 @@ export function Sidebar() {
                 </div>
             </nav>
         </div>
+        </>
     );
 }

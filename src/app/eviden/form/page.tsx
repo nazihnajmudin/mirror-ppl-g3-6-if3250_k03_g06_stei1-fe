@@ -9,7 +9,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { UploadCloud, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Music, Video, MonitorPlay, Save, Edit, Loader2, Lock, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
+import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/lib/api-client";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import dynamic from 'next/dynamic';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -76,6 +78,8 @@ export default function EvidenFormPage() {
     const [isProdiLoading, setIsProdiLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isFetchingDetail, setIsFetchingDetail] = useState(false);
+    const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+    const { toast } = useToast();
 
     const [formData, setFormData] = useState({
         prodiId: "",
@@ -264,22 +268,20 @@ export default function EvidenFormPage() {
             }
 
             sessionStorage.removeItem('unsavedChanges');
-            alert("Eviden berhasil disimpan!");
+            toast({ title: "Berhasil", description: "Eviden berhasil disimpan!" });
             router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         } catch (error: any) {
-            alert(error?.response?.data?.message || "Terjadi kesalahan saat menyimpan eviden.");
+            toast({ variant: "destructive", title: "Gagal menyimpan", description: error?.response?.data?.message || "Terjadi kesalahan saat menyimpan eviden." });
         } finally {
             setIsSaving(false);
         }
     };
 
+    const goBack = () => router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
+
     const handleCancel = () => {
-        const goBack = () => router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden');
         if (sessionStorage.getItem('unsavedChanges') === 'true') {
-            if (window.confirm("Perubahan belum disimpan. Yakin ingin membatalkan?")) {
-                sessionStorage.removeItem('unsavedChanges');
-                goBack();
-            }
+            setConfirmCancelOpen(true);
         } else {
             goBack();
         }
@@ -291,6 +293,17 @@ export default function EvidenFormPage() {
     const kriteriaList = isInfokom(activeProdi?.abbreviation) ? KRITERIA_LAM_INFOKOM : KRITERIA_LAM_TEKNIK;
 
     return (
+        <>
+        <ConfirmDialog
+            open={confirmCancelOpen}
+            title="Batalkan perubahan?"
+            description="Perubahan belum disimpan. Yakin ingin membatalkan?"
+            confirmLabel="Ya, Batalkan"
+            cancelLabel="Lanjut Edit"
+            variant="destructive"
+            onConfirm={() => { sessionStorage.removeItem('unsavedChanges'); setConfirmCancelOpen(false); goBack(); }}
+            onCancel={() => setConfirmCancelOpen(false)}
+        />
         <div className="space-y-6 max-w-5xl mx-auto pb-12">
             <header className="flex justify-between items-center mb-8 border-b border-gray-200 pb-6 sticky top-0 bg-gray-50 z-20">
                 <div className="flex items-center gap-4">
@@ -492,5 +505,6 @@ export default function EvidenFormPage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }
