@@ -111,8 +111,9 @@ export default function SettingsPage() {
 
   const getDisplayName = (name: string) => {
     switch (name) {
-      case 'accreditation_expiry_warning_days': return 'Ambangi Masa Berlaku Akreditasi (Hari)'
-      case 'document_inactivity_days': return 'Ambangi Ketidakaktifan Dokumen (Hari)'
+      case 'accreditation_expiry_warning_days': return 'Ambang Batas Masa Berlaku Akreditasi'
+      case 'document_inactivity_days': return 'Ambang Batas Ketidakaktifan Dokumen'
+      case 'indicator_passing_grade': return 'Passing Grade Indikator Akreditasi'
       default: return name
     }
   }
@@ -120,9 +121,20 @@ export default function SettingsPage() {
   const getDescription = (name: string) => {
     switch (name) {
       case 'accreditation_expiry_warning_days': 
-        return 'Jumlah hari sebelum akreditasi berakhir untuk memicu notifikasi peringatan.'
+        return 'Jumlah hari sebelum akreditasi berakhir untuk memicu notifikasi peringatan. (Contoh: 90 hari ≈ 3 bulan)'
       case 'document_inactivity_days': 
         return 'Jumlah hari ketidakaktifan dokumen DRAFT sebelum memicu notifikasi informasi.'
+      case 'indicator_passing_grade':
+        return 'Nilai ambang batas indikator (dalam skala 0–40, dibagi 10 untuk skala 0–4). Contoh: 25 = 2.5'
+      default: return ''
+    }
+  }
+
+  const getUnit = (name: string) => {
+    switch (name) {
+      case 'accreditation_expiry_warning_days': return 'hari'
+      case 'document_inactivity_days': return 'hari'
+      case 'indicator_passing_grade': return 'poin'
       default: return ''
     }
   }
@@ -161,16 +173,20 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-500 mt-1">{getDescription(t.name)}</p>
                 </div>
                 <div className="md:col-span-1">
-                  <Input 
-                    type="number" 
-                    defaultValue={t.value}
-                    onBlur={(e) => {
-                      if (parseInt(e.target.value) !== t.value) {
-                        handleUpdateThreshold(t.name, e.target.value)
-                      }
-                    }}
-                    className="h-9"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="number"
+                      min={1}
+                      defaultValue={t.value}
+                      onBlur={(e) => {
+                        if (parseInt(e.target.value) !== t.value) {
+                          handleUpdateThreshold(t.name, e.target.value)
+                        }
+                      }}
+                      className="h-9"
+                    />
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{getUnit(t.name)}</span>
+                  </div>
                 </div>
                 <div className="flex justify-end">
                   {saving === t.name ? (
