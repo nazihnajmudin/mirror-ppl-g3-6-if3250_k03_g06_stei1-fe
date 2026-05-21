@@ -69,6 +69,9 @@ export default function SettingsPage() {
         title: "Berhasil",
         description: `Pengaturan ${name} telah diperbarui`,
       })
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event('notifications-updated'));
+      }
     } catch (error) {
       console.error('Gagal memperbarui pengaturan:', error)
       toast({
@@ -89,6 +92,9 @@ export default function SettingsPage() {
         title: "Berhasil",
         description: "Sistem Early Warning telah dijalankan secara manual",
       })
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event('notifications-updated'));
+      }
     } catch (error) {
       console.error('Gagal menjalankan early warning:', error)
       toast({

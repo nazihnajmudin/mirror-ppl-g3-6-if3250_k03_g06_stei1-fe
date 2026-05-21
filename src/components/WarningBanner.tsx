@@ -31,18 +31,26 @@ export function WarningBanner() {
     if (loading) return;
     const isSuperOrPimpinan = user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN';
 
-    if (isSuperOrPimpinan) {
-      const fetchAlerts = async () => {
-        try {
-          const res = await apiClient.get('/notifications')
-          const all = res.data.data || []
-          const critical = all.filter((n: Notification) => !n.isRead && (n.type === 'WARNING' || n.type === 'DANGER'))
-          setActiveAlerts(critical)
-        } catch (error) {
-          console.error('Gagal mengambil alert banner:', error)
-        }
+    const fetchAlerts = async () => {
+      try {
+        const res = await apiClient.get('/notifications')
+        const all = res.data.data || []
+        const critical = all.filter((n: Notification) => !n.isRead && (n.type === 'WARNING' || n.type === 'DANGER'))
+        setActiveAlerts(critical)
+      } catch (error) {
+        console.error('Gagal mengambil alert banner:', error)
       }
+    }
+
+    if (isSuperOrPimpinan) {
       fetchAlerts()
+
+      // Listen for custom trigger to update alert banner immediately
+      window.addEventListener('notifications-updated', fetchAlerts)
+    }
+
+    return () => {
+      window.removeEventListener('notifications-updated', fetchAlerts)
     }
   }, [user?.role, loading]) // Tambahkan dependency
 

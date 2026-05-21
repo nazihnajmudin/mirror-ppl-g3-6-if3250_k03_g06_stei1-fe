@@ -126,6 +126,10 @@ export default function ManajemenSertifikatPage() {
       toast({ title: "Berhasil", description: "Data akreditasi berhasil disimpan" });
       setEditing(null);
       await fetchData();
+      // Dispatch custom event to notify NotificationBell & WarningBanner to update instantly
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event('notifications-updated'));
+      }
     } catch (err: any) {
       toast({ variant: "destructive", title: "Gagal menyimpan", description: err.message });
     } finally {

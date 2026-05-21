@@ -53,7 +53,14 @@ export function NotificationBell() {
     fetchNotifications()
     // Refresh every 5 minutes
     const interval = setInterval(fetchNotifications, 5 * 60 * 1000)
-    return () => clearInterval(interval)
+    
+    // Listen for custom trigger to update notifications immediately
+    window.addEventListener('notifications-updated', fetchNotifications)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('notifications-updated', fetchNotifications)
+    }
   }, [fetchNotifications, user?.role])
 
   const unreadNotifications = notifications.filter(n => !n.isRead)
