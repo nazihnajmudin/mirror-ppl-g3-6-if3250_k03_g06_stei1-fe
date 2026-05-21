@@ -48,7 +48,12 @@ export function WarningBanner() {
 
   if (dismissed || activeAlerts.length === 0) return null
 
-  const alert = activeAlerts[0] // Tampilkan yang paling baru/kritis
+  // Prioritize accreditation expiry/danger warnings to the front
+  const accreditationAlerts = activeAlerts.filter(n => n.title === 'Peringatan Akreditasi' || n.title === 'Akreditasi Kedaluwarsa')
+  const otherAlerts = activeAlerts.filter(n => n.title !== 'Peringatan Akreditasi' && n.title !== 'Akreditasi Kedaluwarsa')
+  const prioritizedAlerts = [...accreditationAlerts, ...otherAlerts]
+
+  const alert = prioritizedAlerts[0] // Tampilkan yang paling prioritas (Akreditasi dahulu)
 
   const handleViewAlert = async (alert: Notification) => {
     try {
