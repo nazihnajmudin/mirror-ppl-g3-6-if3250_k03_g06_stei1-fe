@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ImportDialog } from "@/components/lkps/import-dialog";
+import { MonitoringDialog } from "@/components/monitoring/monitoring-dialog";
 import { useLKPS } from "@/hooks/use-lkps";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/lib/api-client";
@@ -321,6 +322,16 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
               >
                 <Download className="w-4 h-4 text-gray-500" /> Unduh (.xlsx)
               </Button>
+              {activeVersion && (
+                <MonitoringDialog
+                  documentType="LKPS"
+                  documentId={activeVersion.id}
+                  documentLabel={activeVersion.name || `LKPS ${activePeriode}`}
+                  triggerLabel="Monitoring"
+                  compact
+                  triggerClassName="rounded-lg h-9 text-xs font-bold"
+                />
+              )}
             </div>
             
             <CardContent className="flex-1 bg-gray-100/50 p-6 flex flex-col items-center justify-center text-center overflow-y-auto min-h-0">

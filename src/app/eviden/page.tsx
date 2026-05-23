@@ -12,6 +12,7 @@ import { useUser } from "@/hooks/useUser";
 import apiClient from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { MonitoringDialog } from "@/components/monitoring/monitoring-dialog";
 
 const KRITERIA_LAM_TEKNIK = [
     { id: "C1", label: "Visi, Misi, Tujuan, dan Strategi" },
@@ -421,6 +422,15 @@ export default function EvidenListPage() {
                                                         {isLocked ? <><Unlock className="w-3.5 h-3.5"/> Buka Kunci</> : <><Lock className="w-3.5 h-3.5"/> Finalisasi</>}
                                                     </button>
                                                 )}
+
+                                                <MonitoringDialog
+                                                    documentType="EVIDEN"
+                                                    documentId={eviden.id}
+                                                    documentLabel={eviden.judul}
+                                                    triggerLabel="Monitoring"
+                                                    compact
+                                                    triggerClassName="text-gray-700 border-gray-200 hover:bg-gray-50"
+                                                />
 
                                                 {!isAdmin && !isLocked && (
                                                     <>
