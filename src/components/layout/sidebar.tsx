@@ -155,7 +155,7 @@ export function Sidebar() {
                         <FileText className="h-4 w-4" />
                         Template Dokumen
                     </Link>
-                    <Link href="#" className={cn(globalItemClass, inactiveGlobalClass)}>
+                    <Link href="/monitoring" className={cn(globalItemClass, inactiveGlobalClass)}>
                         <Activity className="h-4 w-4" />
                         Monitoring & Evaluasi
                     </Link>

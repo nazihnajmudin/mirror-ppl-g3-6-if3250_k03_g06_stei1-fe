@@ -9,6 +9,7 @@ import { UploadCloud, Download, FileText, CheckCircle2, Clock, ChevronLeft, Chev
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/api-client";
 import { useUser } from "@/hooks/useUser";
+import { MonitoringDialog } from "@/components/monitoring/monitoring-dialog";
 declare module 'docx-preview';
 
 // FUNGSI FORMATTING
@@ -482,6 +483,16 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
                                 <p className="text-[10px] text-gray-400 mt-1 truncate">{item.name} • {formatBytes(item.ukuran)}</p>
                                 
                                 {/* UI BADGE STATUS & TOMBOL LOCKING */}
+                                                {activeDoc && (
+                                                    <MonitoringDialog
+                                                        documentType="LED"
+                                                        documentId={activeDoc.id}
+                                                        documentLabel={activeDoc.name || `LED ${activePeriode}`}
+                                                        triggerLabel="Monitoring"
+                                                        compact
+                                                        triggerClassName="bg-white text-gray-900 border border-gray-200 hover:bg-gray-50"
+                                                    />
+                                                )}
                                 <div className="flex items-center justify-between border-t border-gray-50 pt-2 mt-2">
                                     <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded flex items-center w-max gap-1", item.status === 'FINAL' ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600")}>
                                         {item.status === 'FINAL' ? <Lock className="w-2.5 h-2.5"/> : <Unlock className="w-2.5 h-2.5"/>}
