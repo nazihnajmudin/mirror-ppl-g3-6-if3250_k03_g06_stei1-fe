@@ -70,14 +70,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('accessToken');
     setUser(null);
-    router.push('/login');
+    window.location.href = '/login';
 
     try {
       await apiClient.post('/auth/logout');
     } catch (error) {
       console.error('Gagal memanggil API logout backend:', error);
     }
-  }, [router]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, fetchSession, logout }}>
