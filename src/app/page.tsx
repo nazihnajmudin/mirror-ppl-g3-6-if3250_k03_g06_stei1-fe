@@ -21,9 +21,9 @@ export default function Home() {
 
     // Redirect based on user role
     if (user.role === "SUPER_ADMIN" || user.role === "PIMPINAN") {
-      router.push("/dashboard")
+      router.push("/dashboard-institusi")
     } else {
-      router.push("/prodi-saya")
+      router.push("/dashboard-prodi")
     }
   }, [user, loading, router])
 
