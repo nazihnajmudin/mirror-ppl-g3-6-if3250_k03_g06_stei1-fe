@@ -113,7 +113,11 @@ export function SidebarProdi() {
                 {filteredNavigation.map((item) => {
                     const Icon = item.icon;
                     const hrefPath = item.href.split('?')[0];
-                    const isActive = hrefPath !== '#' && (pathname === hrefPath || pathname.startsWith(hrefPath + '/'));
+                    let isActive = hrefPath !== '#' && (pathname === hrefPath || pathname.startsWith(hrefPath + '/'));
+
+                    if (hrefPath === "/dashboard/lkps" && (pathname.startsWith("/lkps") || pathname.startsWith("/dashboard/lkps"))) {
+                        isActive = true;
+                    }
 
                     return (
                         <Link

@@ -173,11 +173,15 @@ export function MobileSidebar({
 
                 const Icon = item.icon
 
-                const active =
+                let active =
                   pathname === item.href ||
                   pathname.startsWith(
                     item.href + "/"
                   )
+
+                if (item.href === "/lkps" && (pathname.startsWith("/lkps") || pathname.startsWith("/dashboard/lkps"))) {
+                  active = true
+                }
 
                 return (
                   <Link

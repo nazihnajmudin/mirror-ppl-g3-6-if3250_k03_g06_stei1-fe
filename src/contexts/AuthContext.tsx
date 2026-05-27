@@ -66,16 +66,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user, loading, pathname, router]);
 
   const logout = useCallback(async () => {
-    // Bersihkan state klien seketika untuk mencegah lag dan loop rerouting
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('accessToken');
-    setUser(null);
-    window.location.href = '/login';
-
     try {
+      // Panggil API logout terlebih dahulu menggunakan token yang masih aktif
       await apiClient.post('/auth/logout');
     } catch (error) {
       console.error('Gagal memanggil API logout backend:', error);
+    } finally {
+      // Hapus token lokal dan lakukan hard reload ke halaman login
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('accessToken');
+      window.location.href = '/login';
     }
   }, []);
 

@@ -14,7 +14,7 @@ export default function SimulasiSkorPage() {
 
   useEffect(() => {
     if (!userLoading && user?.role === 'KAPRODI' && user?.prodiId) {
-      router.push(`/simulasi-skor-prodi/${user.prodiId}`)
+      router.push(`/simulasi-skor/${user.prodiId}`)
     }
   }, [user?.role, user?.prodiId, userLoading, router])
 

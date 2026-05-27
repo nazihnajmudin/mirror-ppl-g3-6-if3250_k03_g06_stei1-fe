@@ -137,7 +137,7 @@ export function Sidebar() {
                         <LayoutDashboard className="h-4 w-4" />
                         Dashboard Prodi
                     </Link>
-                    <Link href="/dashboard/lkps" onClick={(e) => handleNavigation(e, '/dashboard/lkps')} className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
+                    <Link href="/dashboard/lkps" onClick={(e) => handleNavigation(e, '/dashboard/lkps')} className={cn(globalItemClass, (pathname.startsWith('/lkps') || pathname.startsWith('/dashboard/lkps')) ? activeGlobalClass : inactiveGlobalClass)}>
                         <FileSpreadsheet className="h-4 w-4" />
                         LKPS
                     </Link>
@@ -204,7 +204,7 @@ export function Sidebar() {
                             <User className="h-4 w-4" />
                             Profil Program Studi
                         </Link>
-                        <Link href="/eviden" onClick={(e) => handleNavigation(e, '/eviden')} className={cn(submenuBaseClass, pathname.startsWith('/eviden') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                        <Link href="/dokumen-eviden" onClick={(e) => handleNavigation(e, '/dokumen-eviden')} className={cn(submenuBaseClass, pathname.startsWith('/dokumen-eviden') ? activeSubmenuClass : inactiveSubmenuClass)}>
                             <FolderOpen className="h-4 w-4" />
                             Dokumen Eviden
                         </Link>

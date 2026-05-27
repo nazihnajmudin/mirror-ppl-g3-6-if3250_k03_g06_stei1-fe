@@ -15,6 +15,7 @@ declare module 'docx-preview';
 
 function ProdiListView() {
     const router = useRouter();
+    const { user } = useUser();
     const [prodis, setProdis] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -32,30 +33,36 @@ function ProdiListView() {
         fetchProdis();
     }, []);
 
-    if (isLoading) return <div className="p-8 text-gray-500">Memuat daftar program studi...</div>;
+    if (isLoading) return <div className="flex justify-center min-h-[400px]"><span className="self-center text-gray-400 animate-pulse text-sm">Memuat daftar program studi...</span></div>;
 
     return (
-    <div className="space-y-6">
-        <header className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Dokumen LED Institusi</h1>
-            <p className="text-sm text-gray-500 mt-1">Pilih Program Studi untuk melihat Laporan Evaluasi Diri.</p>
+    <div className="space-y-6 md:space-y-8">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900">Dokumen LED Institusi</h1>
+                <p className="text-sm text-gray-500 mt-1">
+                    {user?.role === 'SUPER_ADMIN' || user?.role === 'PIMPINAN'
+                        ? "Pilih Program Studi untuk meninjau Laporan Evaluasi Diri."
+                        : "Pilih Program Studi penugasan Anda untuk mengelola Laporan Evaluasi Diri."}
+                </p>
+            </div>
         </header>
 
         <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <Table>
             <TableHeader className="bg-gray-50/50">
-            <TableRow>
-                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4">Program Studi</TableHead>
-                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 text-right">Aksi</TableHead>
+            <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 tracking-wider">PROGRAM STUDI</TableHead>
+                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-6 py-4 text-right tracking-wider">AKSI</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
             {prodis.map((prodi) => (
-                <TableRow key={prodi.id} className="hover:bg-gray-50/40">
+                <TableRow key={prodi.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
                 <TableCell className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-900 rounded-lg text-white shadow-sm"><BookOpen className="w-4 h-4" /></div>
-                    <span className="text-[14px] font-bold text-gray-900">{prodi.fullname}</span>
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shadow-sm border border-blue-100"><BookOpen className="w-4 h-4" /></div>
+                    <span className="text-[14px] font-bold text-gray-900 leading-tight">{prodi.fullname}</span>
                     </div>
                 </TableCell>
                 <TableCell className="px-6 py-4 text-right">
@@ -63,7 +70,7 @@ function ProdiListView() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => router.push(`/led?prodiId=${prodi.id}`)}
-                    className="h-8 text-xs font-bold gap-2"
+                    className="rounded-lg h-9 px-4 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-md transition-all gap-2"
                     >
                     <Eye className="w-4 h-4" /> Lihat LED
                     </Button>
@@ -71,7 +78,9 @@ function ProdiListView() {
                 </TableRow>
             ))}
             {prodis.length === 0 && (
-                <TableRow><TableCell colSpan={2} className="text-center py-8 text-gray-500">Belum ada data program studi.</TableCell></TableRow>
+                <TableRow>
+                    <TableCell colSpan={2} className="px-6 py-8 text-center text-sm text-gray-500">Belum ada data program studi.</TableCell>
+                </TableRow>
             )}
             </TableBody>
         </Table>
@@ -442,14 +451,13 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
                     const isLatest = index === 0; 
                     const isSelected = activeDocumentId === item.id;
                     return (
-                        <div key={item.id} onClick={() => setActiveDocumentId(item.id)} className={cn("px-5 py-4 border-b border-gray-50 flex items-start gap-3 transition-colors cursor-pointer group", isSelected ? "bg-[#eef2ff] border-l-4 border-l-blue-500" : "bg-white hover:bg-gray-50 opacity-80")}>
-                            <div className="mt-0.5">{isLatest ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Clock className="w-4 h-4 text-gray-400" />}</div>
+                        <div key={item.id} onClick={() => setActiveDocumentId(item.id)} className={cn("px-5 py-4 border-b border-gray-50 flex items-start gap-3 transition-colors cursor-pointer group", isSelected ? "bg-blue-50/50 border-l-4 border-l-blue-600" : "bg-white hover:bg-gray-50 opacity-80")}>
+                            <div className="mt-0.5">{isLatest ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Clock className="w-4 h-4 text-gray-400" />}</div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-center mb-0.5">
-                                    <span className={cn("text-[13px] font-bold truncate", isLatest ? "text-green-800" : "text-gray-700")}>Versi {item.versi} {isLatest && "(Terbaru)"}</span>
+                                    <span className={cn("text-[13px] font-bold truncate", isLatest ? "text-emerald-800" : "text-gray-900")}>{`Versi ${item.versi}`} {isLatest && "(Terbaru)"}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className={cn("text-[11px] font-medium whitespace-nowrap ml-2", isLatest ? "text-green-600" : "text-gray-500")}>{formatDate(item.createdAt)}</span>
-                                        {/* Tombol Delete Single (Hanya Admin) */}
+                                        <span className={cn("text-[10px] font-bold tracking-wider whitespace-nowrap ml-2", isLatest ? "text-emerald-600" : "text-gray-400")}>{formatDate(item.createdAt)}</span>
                                         {isAdmin && item.status !== 'FINAL' && (
                                         <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, type: 'single', doc: item }); }} className="text-gray-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100">
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -457,37 +465,23 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
                                         )}
                                     </div>
                                 </div>
-                                <p className="text-[11px] text-gray-600 truncate">Oleh: {item.pengunggah?.name || "Tidak diketahui"}</p>
-                                <p className="text-[10px] text-gray-400 mt-1 truncate">{item.name} • {formatBytes(item.ukuran)}</p>
-                                
-                                {/* UI BADGE STATUS & TOMBOL LOCKING */}
-                                                {activeDoc && (
-                                                    <MonitoringDialog
-                                                        documentType="LED"
-                                                        documentId={activeDoc.id}
-                                                        documentLabel={activeDoc.name || `LED ${activePeriode}`}
-                                                        triggerLabel="Monitoring"
-                                                        compact
-                                                        triggerClassName="bg-white text-gray-900 border border-gray-200 hover:bg-gray-50"
-                                                    />
-                                                )}
-                                <div className="flex items-center justify-between border-t border-gray-50 pt-2 mt-2">
-                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded flex items-center w-max gap-1", item.status === 'FINAL' ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600")}>
-                                        {item.status === 'FINAL' ? <Lock className="w-2.5 h-2.5"/> : <Unlock className="w-2.5 h-2.5"/>}
+                                <p className="text-[11px] font-medium text-gray-500 truncate mb-2">{item.name}</p>
+                                <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
+                                    <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded flex items-center w-max gap-1.5 border", item.status === 'FINAL' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200")}>
+                                        {item.status === 'FINAL' ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>}
                                         {item.status || 'DRAFT'}
                                     </span>
                                     {canToggleLock && (
-                                        <Button 
-                                            size="sm" 
-                                            variant="ghost" 
-                                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(item.id, item.status || 'DRAFT'); }} 
-                                            className={cn("h-6 px-2 text-[10px] font-bold", item.status === 'FINAL' ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50" : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50")}
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(item.id, item.status || 'DRAFT'); }}
+                                            className={cn("h-6 px-2 text-[10px] font-bold rounded-md", item.status === 'FINAL' ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50" : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50")}
                                         >
                                             {item.status === 'FINAL' ? "Buka Kunci" : "Finalisasi"}
                                         </Button>
                                     )}
                                 </div>
-
                             </div>
                         </div>
                     );
@@ -499,21 +493,31 @@ function DocumentView({ targetProdiId, canUpload, isGuest }: { targetProdiId: st
             {/* KOLOM KANAN (PREVIEW) */}
             <div className="col-span-12 lg:col-span-8 flex flex-col h-full min-h-0">
             <Card className="rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col h-full min-h-0">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0"><FileText className="w-5 h-5" /></div>
+                        <div className="p-2.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg shrink-0"><FileText className="w-5 h-5" /></div>
                         <div className="overflow-hidden">
-                            <h2 className="text-[15px] font-bold text-gray-900 leading-tight truncate">{activeDoc?.name || `Preview LED (${activePeriode})`}</h2>
-                            <p className="text-[12px] text-gray-500 truncate">{activeDoc ? `Versi ${activeDoc.versi} • ${formatDate(activeDoc.createdAt)}` : 'Live Preview (docx)'}</p>
+                            <h2 className="text-[14px] font-bold text-gray-900 leading-tight truncate">{activeDoc?.name || `Preview LED (${activePeriode})`}</h2>
+                            <p className="text-[11px] font-medium text-gray-500 truncate flex items-center gap-2 mt-0.5">
+                                {activeDoc ? `Versi ${activeDoc.versi} • ${formatDate(activeDoc.createdAt)}` : 'Live Preview (docx)'}
+                                {activeDoc?.status === 'FINAL' && (
+                                    <span className="inline-flex items-center text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                        <Lock className="w-2.5 h-2.5 mr-1"/> FINAL
+                                    </span>
+                                )}
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-4">
-                        {/* BADGE STATUS DOKUMEN DI PREVIEW */}
+                    <div className="flex gap-2">
                         {activeDoc && (
-                        <span className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md border flex items-center gap-1.5 shadow-sm", activeDoc.status === 'FINAL' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200")}>
-                            {activeDoc.status === 'FINAL' ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>}
-                            {activeDoc.status || 'DRAFT'}
-                        </span>
+                            <MonitoringDialog
+                                documentType="LED"
+                                documentId={activeDoc.id}
+                                documentLabel={activeDoc.name || `LED ${activePeriode}`}
+                                triggerLabel="Monitoring"
+                                compact
+                                triggerClassName="rounded-lg h-9 text-xs font-bold bg-white text-gray-700 border-gray-200 shadow-sm"
+                            />
                         )}
                         <Button variant="outline" onClick={handleDownload} disabled={!activeDocumentId} className="rounded-lg h-9 text-xs font-bold text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm gap-2">
                             <Download className="w-4 h-4 text-gray-500" /> Unduh
