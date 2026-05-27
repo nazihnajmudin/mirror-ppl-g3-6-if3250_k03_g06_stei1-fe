@@ -13,7 +13,7 @@ import {
 import { useEffect, useState } from "react"
 
 import { cn } from "@/lib/utils"
-import { useUser } from "@/hooks/useUser"
+import { useAuth } from "@/contexts/AuthContext"
 
 import {
   bottomMenu,
@@ -25,7 +25,7 @@ import {
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useUser()
+  const { user, logout: contextLogout } = useAuth()
 
   const [loading, setLoading] =
     useState(false)
@@ -90,17 +90,10 @@ export function AppSidebar() {
 
   const logout = async () => {
     setLoading(true)
-
     try {
-      localStorage.removeItem(
-        "access_token"
-      )
-
-      localStorage.removeItem(
-        "accessToken"
-      )
-
-      router.push("/login")
+      await contextLogout()
+    } catch (err: unknown) {
+      console.error("Logout error:", err)
     } finally {
       setLoading(false)
     }

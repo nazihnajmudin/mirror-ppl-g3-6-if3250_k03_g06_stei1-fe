@@ -17,7 +17,7 @@ import {
 } from "react"
 
 import { cn } from "@/lib/utils"
-import { useUser } from "@/hooks/useUser"
+import { useAuth } from "@/contexts/AuthContext"
 
 import {
   bottomMenu,
@@ -37,7 +37,7 @@ export function MobileSidebar({
 }: Props) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useUser()
+  const { user, logout: contextLogout } = useAuth()
 
   const [expanded, setExpanded] =
     useState<"general" | "prodi" | null>(
@@ -102,19 +102,11 @@ export function MobileSidebar({
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
-
     try {
-      localStorage.removeItem(
-        "access_token"
-      )
-
-      localStorage.removeItem(
-        "accessToken"
-      )
-
-      router.push("/login")
-
+      await contextLogout()
       setOpen(false)
+    } catch (err: unknown) {
+      console.error("Logout error:", err)
     } finally {
       setIsLoggingOut(false)
     }

@@ -9,14 +9,14 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   fetchSession: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   fetchSession: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -65,12 +65,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, loading, pathname, router]);
 
-  const logout = () => {
+  const logout = useCallback(async () => {
+    // Bersihkan state klien seketika untuk mencegah lag dan loop rerouting
     localStorage.removeItem('access_token');
     localStorage.removeItem('accessToken');
     setUser(null);
     router.push('/login');
-  };
+
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      console.error('Gagal memanggil API logout backend:', error);
+    }
+  }, [router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, fetchSession, logout }}>
