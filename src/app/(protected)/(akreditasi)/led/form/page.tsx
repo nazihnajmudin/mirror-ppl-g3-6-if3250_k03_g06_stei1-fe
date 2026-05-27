@@ -88,7 +88,7 @@ const TEMPLATES: Record<string, string> = {
     <th>Nama Program Studi</th>
     <th>Status/ Peringkat Akreditasi Program Studi</th>
     <th>No. dan Tgl. SK Akreditasi Program Studi</th>
-    <th>Tgl. Kadaluarsa Akreditasi Program Studi</th>
+    <th>Tgl. Kedaluwarsa Akreditasi Program Studi</th>
     <th>Jumlah mahasiswa saat TS 4)</th>
   </tr>
   <tr><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>

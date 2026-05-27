@@ -4,13 +4,13 @@ export interface ProdiWithAccreditation extends Omit<Prodi, 'accreditation'> {
   accreditation: AccreditationInfo | null
 }
 
-export type AccreditationStatus = "Aktif" | "Segera Habis" | "Kadaluarsa" | "Belum Diatur"
+export type AccreditationStatus = "Aktif" | "Segera Habis" | "Kedaluwarsa" | "Belum Diatur"
 
 export function getStatus(endDate?: string | null): AccreditationStatus {
   if (!endDate) return "Belum Diatur"
   const end = new Date(endDate)
   const now = new Date()
-  if (end < now) return "Kadaluarsa"
+  if (end < now) return "Kedaluwarsa"
   const diff = (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   if (diff <= 90) return "Segera Habis"
   return "Aktif"

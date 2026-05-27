@@ -344,7 +344,7 @@ const TEMPLATES: Record<string, string> = {
     <th>Nama Program Studi</th>
     <th>Status/Peringkat</th>
     <th>No. dan Tgl. SK</th>
-    <th>Tgl. Kadaluarsa</th>
+    <th>Tgl. Kedaluwarsa</th>
     <th>Jumlah Mahasiswa saat TS 4)</th>
   </tr>
   <tr><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>

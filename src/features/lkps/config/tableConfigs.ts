@@ -13,8 +13,8 @@ export const tableConfigs: Record<string, TableConfig> = {
     title: 'Daftar Program Studi di UPPS',
     startRow: 17,
     startCol: 2,
-    keys: ['no', 'jenis_program', 'nama_prodi', 'status_akreditasi', 'no_sk', 'tgl_kadaluarsa', 'jumlah_mahasiswa'],
-    columnLabels: ['No', 'Jenis Program', 'Nama Program Studi', 'Status Akreditasi', 'No. SK', 'Tgl. Kadaluarsa', 'Jumlah Mahasiswa'],
+    keys: ['no', 'jenis_program', 'nama_prodi', 'status_akreditasi', 'no_sk', 'tgl_kedaluwarsa', 'jumlah_mahasiswa'],
+    columnLabels: ['No', 'Jenis Program', 'Nama Program Studi', 'Status Akreditasi', 'No. SK', 'Tgl. Kedaluwarsa', 'Jumlah Mahasiswa'],
     columns: [
       { data: 0, type: 'numeric', width: 40 },
       { data: 1, type: 'text', width: 150 },
@@ -32,7 +32,7 @@ export const tableConfigs: Record<string, TableConfig> = {
         { label: 'Akreditasi Program Studi', colspan: 3 },
         { label: 'Jumlah Mahasiswa saat TS', rowspan: 2 },
       ],
-      ['Status/ Peringkat', 'No. dan Tgl. SK', 'Tgl. Kadaluarsa'],
+      ['Status/ Peringkat', 'No. dan Tgl. SK', 'Tgl. Kedaluwarsa'],
     ],
   },
   'PSPPI': {

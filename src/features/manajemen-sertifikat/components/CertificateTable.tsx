@@ -19,7 +19,7 @@ function StatusBadge({ status }: { status: AccreditationStatus }) {
   const map: Record<AccreditationStatus, string> = {
     Aktif: "bg-green-50 text-green-600",
     "Segera Habis": "bg-yellow-50 text-yellow-600",
-    Kadaluarsa: "bg-red-50 text-red-600",
+    Kedaluwarsa: "bg-red-50 text-red-600",
     "Belum Diatur": "bg-gray-100 text-gray-600",
   }
   return <Badge className={cn("px-2.5 py-0.5 text-[11px] font-bold shadow-none border-none ring-0 rounded-md", map[status])}>{status}</Badge>
