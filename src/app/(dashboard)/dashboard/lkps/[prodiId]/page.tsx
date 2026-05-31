@@ -361,9 +361,8 @@ export default function LKPSProdiPage({ params }: { params: Promise<{ prodiId: s
                     <div className="flex gap-3 flex-wrap justify-center">
                       <Button 
                         onClick={() => {
-                          if (activeVersionId) {
-                            router.push(`/dashboard/lkps/${prodiId}/form?documentId=${activeVersionId}`);
-                          }
+                          const url = `/dashboard/lkps/${prodiId}/form${activeVersionId ? `?versionId=${activeVersionId}` : ''}`;
+                          router.push(url);
                         }}
                         disabled={!activeVersionId}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2"

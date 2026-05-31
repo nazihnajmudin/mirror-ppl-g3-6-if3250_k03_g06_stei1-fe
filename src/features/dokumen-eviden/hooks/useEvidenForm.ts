@@ -155,13 +155,13 @@ export function useEvidenForm(user: any, mode: 'add' | 'edit' | 'view', evidenId
 
       sessionStorage.removeItem('unsavedChanges')
       toast({ title: "Berhasil", description: "Eviden berhasil disimpan!" })
-      router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/eviden')
+      router.push(mode === 'add' && urlProdiId ? `/dokumen-eviden?prodiId=${urlProdiId}` : '/eviden')
     } catch (error: any) {
       toast({ variant: "destructive", title: "Gagal menyimpan", description: error?.response?.data?.message || "Terjadi kesalahan." })
     } finally { setIsSaving(false) }
   }
 
-  const goBack = () => router.push(mode === 'add' && urlProdiId ? `/eviden?prodiId=${urlProdiId}` : '/dokumen-eviden')
+  const goBack = () => router.push(mode === 'add' && urlProdiId ? `/dokumen-eviden?prodiId=${urlProdiId}` : '/dokumen-eviden')
   const handleCancel = () => { if (sessionStorage.getItem('unsavedChanges') === 'true') setConfirmCancelOpen(true); else goBack() }
 
   return {
