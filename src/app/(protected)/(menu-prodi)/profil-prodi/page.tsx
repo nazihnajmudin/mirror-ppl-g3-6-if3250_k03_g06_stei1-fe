@@ -47,7 +47,8 @@ function ProfilProdiContent() {
   if (!user) return null
 
   const isGuestRole = user.role === 'PIMPINAN' || user.role === 'SUPER_ADMIN'
-  const canEdit = user.role === 'KAPRODI'
+  // const canEdit = user.role === 'KAPRODI'
+  const canEdit = false
 
   if (urlProdiId) {
     const hasAccess = accessibleProdis.some(p => p.id === urlProdiId)
