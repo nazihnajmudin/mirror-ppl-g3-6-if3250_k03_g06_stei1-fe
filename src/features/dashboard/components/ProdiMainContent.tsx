@@ -112,7 +112,13 @@ export function ProdiMainContent({
                           {lkps.subsections.map((sub: any) => (
                             <button
                               key={sub.id}
-                              onClick={() => router.push(`/lkps?sheet=${sub.id}&prodiId=${dashboard?.prodi?.id}`)}
+                              onClick={() => {
+                                if (dashboard?.documents?.lkps?.id) {
+                                  router.push(`/lkps/${dashboard.prodi.id}/report?versionId=${dashboard.documents.lkps.id}&sheet=${sub.id}`)
+                                } else {
+                                  router.push(`/lkps/${dashboard?.prodi?.id}`)
+                                }
+                              }}
                               className="w-full flex items-center justify-between p-2 rounded-md hover:bg-emerald-50 text-left transition-colors group/sub"
                             >
                               <div className="flex items-center gap-2">
