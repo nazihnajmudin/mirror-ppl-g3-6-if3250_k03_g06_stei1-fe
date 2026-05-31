@@ -120,9 +120,6 @@ export function LKPSHistoryMain({ logic, prodiId }: { logic: any, prodiId: strin
                   </div>
                 ) : (
                   <div className="flex gap-3 justify-center">
-                      <Button onClick={() => { if(logic.activeVersionId) logic.router.push(`/lkps/${prodiId}/form?documentId=${logic.activeVersionId}`) }} disabled={!logic.activeVersionId} className="bg-gray-900 hover:bg-gray-800 text-white font-bold h-11 px-6 rounded-xl shadow-md transition-all flex items-center gap-2">
-                        <FileSpreadsheet className="w-4 h-4" /> Isi via Form LKPS
-                      </Button>
                       <Button onClick={() => { if(logic.activeVersionId) logic.router.push(`/lkps/${prodiId}/report?versionId=${logic.activeVersionId}`) }} disabled={!logic.activeVersionId} className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 px-6 rounded-xl shadow-md transition-all flex items-center gap-2">
                         <FileSpreadsheet className="w-4 h-4" /> Buka Mirror Excel
                       </Button>

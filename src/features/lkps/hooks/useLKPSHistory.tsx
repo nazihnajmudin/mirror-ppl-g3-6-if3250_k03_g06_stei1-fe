@@ -9,10 +9,20 @@ export function useLKPSHistory(prodiId: string) {
   const [activePeriode, setActivePeriode] = useState<string>(new Date().getFullYear().toString())
   const [availablePeriods, setAvailablePeriods] = useState<string[]>([])
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null)
+  const [format, setFormat] = useState<'INFOKOM' | 'TEKNIK'>('INFOKOM')
   const { toast } = useToast()
   const router = useRouter()
 
-  useEffect(() => { apiClient.get('/auth/me').then(res => setUser(res.data.data)).catch(() => {}) }, [])
+  useEffect(() => {
+    apiClient.get('/auth/me').then(res => setUser(res.data.data)).catch(() => {})
+    if (prodiId) {
+      apiClient.get(`/lkps/format/${prodiId}`).then(res => {
+        if (res.data?.data?.format) {
+          setFormat(res.data.data.format)
+        }
+      }).catch(() => {})
+    }
+  }, [prodiId])
 
   const { versions: allVersions, loading, refresh } = useLKPS(prodiId)
   const versions = allVersions.filter(v => (v.periode || new Date(v.createdAt).getFullYear().toString()) === activePeriode)
@@ -37,21 +47,36 @@ export function useLKPSHistory(prodiId: string) {
     if (!activeVersionId) return
     toast({ title: "Menyiapkan Unduhan", description: "Excel sedang digenerate..." })
     try {
-      const response = await apiClient.get(`/lkps/export/${activeVersionId}`, { responseType: 'blob' })
-      const url = window.URL.createObjectURL(new Blob([response.data]))
-      const link = document.createElement('a')
-      link.href = url
-      const contentDisposition = response.headers['content-disposition']
-      let filename = activeVersion?.originalFilename || `LKPS_${activeVersion?.prodi?.abbreviation || 'Export'}.xlsx`
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/)
-        if (filenameMatch && filenameMatch[1]) filename = decodeURIComponent(filenameMatch[1])
+      const res = await apiClient.get(`/lkps/${activeVersionId}`)
+      const docContent = res.data.data.content
+      const { getTableConfig } = await import('@/features/lkps/config/tableConfigs')
+      const { exportToExcel } = await import('@/features/lkps/utils/exportUtils')
+      const { getSheetNamesByFormat } = await import('@/features/lkps/config/lkpsFormat')
+      
+      const convertedData: Record<string, any[]> = {}
+      const SHEETS = getSheetNamesByFormat(format)
+      
+      if (docContent && typeof docContent === 'object') {
+        for (const sheet of SHEETS) {
+          if (Array.isArray(docContent[sheet])) {
+            const sheetData = docContent[sheet]
+            if (sheetData.length === 0) {
+              convertedData[sheet] = []
+            } else if (Array.isArray(sheetData[0])) {
+              convertedData[sheet] = sheetData
+            } else {
+              const sheetConfig = getTableConfig(sheet, format)
+              convertedData[sheet] = sheetData.map((row: any) => {
+                if (typeof row !== 'object' || row === null) return []
+                if (sheetConfig?.columns?.length > 0) return sheetConfig.columns.map((column: any) => row[column.key] ?? '')
+                return Object.keys(row).map((key) => row[key] ?? '')
+              })
+            }
+          }
+        }
       }
-      link.setAttribute('download', filename)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
+      
+      await exportToExcel(convertedData)
       toast({ title: "Unduhan Berhasil", description: "File LKPS telah berhasil diunduh." })
     } catch (err) { toast({ variant: "destructive", title: "Unduhan Gagal", description: "Terjadi kesalahan." }) }
   }
@@ -68,6 +93,6 @@ export function useLKPSHistory(prodiId: string) {
 
   return {
     user, activePeriode, setActivePeriode, availablePeriods, activeVersionId, setActiveVersionId,
-    versions, allVersions, activeVersion, loading, refresh, handleExport, handleToggleStatus, router
+    versions, allVersions, activeVersion, loading, refresh, handleExport, handleToggleStatus, router, format
   }
 }

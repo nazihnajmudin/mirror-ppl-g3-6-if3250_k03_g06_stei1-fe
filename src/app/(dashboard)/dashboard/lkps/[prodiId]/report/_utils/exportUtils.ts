@@ -1,6 +1,32 @@
 import ExcelJS from 'exceljs';
 import { tableConfigs } from '../_config/tableConfigs';
 
+const extractCellValue = (cell: any): any => {
+  let value = cell?.value;
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return value;
+  if (typeof value === 'object') {
+    if ('result' in value) value = value.result;
+    else if ('error' in value) return '';
+    else if ('hyperlink' in value && 'text' in value) value = value.text;
+    else if ('richText' in value) value = value.richText.map((rt: any) => rt.text).join('');
+    else return '';
+  }
+  return value !== undefined && value !== null ? value : '';
+};
+
+const findDataStartRow = (worksheet: any, maxRows = 40): number => {
+  for (let r = 1; r <= maxRows; r++) {
+    const row = worksheet.getRow(r);
+    const valA = String(extractCellValue(row.getCell(1))).trim();
+    const valB = String(extractCellValue(row.getCell(2))).trim();
+    if (valA === '1' || valB === '1') {
+      return r; 
+    }
+  }
+  return 10; 
+};
+
 /**
  * Exports data to Excel.
  * Optimization: If we only want to export the current view, it's much faster.
@@ -9,7 +35,7 @@ import { tableConfigs } from '../_config/tableConfigs';
 export const exportToExcel = async (allData: Record<string, any[][]>, activeSheet?: string) => {
   try {
     console.log('[Export] Starting export process...');
-    const response = await fetch('/template.xlsx');
+    const response = await fetch('/template-lkps.xlsx');
     if (!response.ok) throw new Error('Template not found');
     
     const arrayBuffer = await response.arrayBuffer();
@@ -29,8 +55,10 @@ export const exportToExcel = async (allData: Record<string, any[][]>, activeShee
 
       if (worksheet && config) {
         console.log(`[Export] Writing ${data.length} rows to sheet: ${sheetName}`);
+        const dynamicStartRow = findDataStartRow(worksheet);
+        
         data.forEach((rowData, index) => {
-          const rowNumber = config.startRow + index;
+          const rowNumber = dynamicStartRow + index;
           const row = worksheet.getRow(rowNumber);
           
           rowData.forEach((cellValue, colIndex) => {

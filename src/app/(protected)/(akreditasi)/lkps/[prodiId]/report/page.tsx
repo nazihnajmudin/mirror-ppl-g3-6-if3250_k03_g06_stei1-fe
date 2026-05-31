@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import apiClient from '@/lib/api-client'
 import SimpleGrid from '@/features/lkps/components/SimpleGrid'
-
-const SHEETS = ['PS', 'PSPPI', '1', '2a1', '2a2', '2a3', '2b', '3a1', '3a2', '3a3', '3a4', '3a5', '3b', '3c', '4a', '4b', '4c', '4d', '4e', '4f-1', '4f-2', '4f-3', '4f-4', '4g', '4h', '4i', '4j', '4k', '5a', '5b', '5c', '6a', '6b', '6c1', '6c2', '6d', '6e1', '6e2', '6e3-1', '6e3-2', '6e3-3', '6e3-4', '6e4', '6f1', '6f2', '6g1', '6g2', '6h1', '6h2', '6i', '7a', '7b']
+import { getSheetNamesByFormat } from '@/features/lkps/config/lkpsFormat'
 
 function ReportContent({ prodiId }: { prodiId: string }) {
   const [activeSheet, setActiveSheet] = useState('2a1')
@@ -19,14 +18,17 @@ function ReportContent({ prodiId }: { prodiId: string }) {
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [format, setFormat] = useState<'INFOKOM' | 'TEKNIK'>('INFOKOM')
   const [backendConfigs, setBackendConfigs] = useState<Record<string, any>>({})
   const { data, setData, resetData, updateSheetData } = useReportStore()
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const versionId = searchParams.get('versionId')
 
+  const SHEETS = getSheetNamesByFormat(format)
+
   const getMergedConfig = (sheetName: string) => {
-    const frontendConfig = getTableConfig(sheetName)
+    const frontendConfig = getTableConfig(sheetName, format)
     const backendConfig = backendConfigs[sheetName]
     if (backendConfig && backendConfig.columns) {
       return { ...frontendConfig, columnLabels: backendConfig.columns.map((col: any) => col.label || col.key), columns: backendConfig.columns }
@@ -49,28 +51,40 @@ function ReportContent({ prodiId }: { prodiId: string }) {
       if (!versionId) return
       setIsLoading(true); setErrorMsg(null)
       try {
+        let currentFormat: 'INFOKOM' | 'TEKNIK' = 'INFOKOM'
+        if (prodiId) {
+          try {
+            const formatRes = await apiClient.get(`/lkps/format/${prodiId}`)
+            if (formatRes.data?.data?.format) {
+              currentFormat = formatRes.data.data.format
+              setFormat(currentFormat)
+            }
+          } catch (e) {}
+        }
+        
         const res = await apiClient.get(`/lkps/${versionId}`)
         const docContent = res.data.data.content
         if (docContent && typeof docContent === 'object') {
           const convertedData: Record<string, any[]> = {}
-          for (const sheet of SHEETS) {
+          const currentSheets = getSheetNamesByFormat(currentFormat)
+          for (const sheet of currentSheets) {
             if (Array.isArray(docContent[sheet])) {
-              convertedData[sheet] = convertToArrayFormat(docContent[sheet], getTableConfig(sheet))
+              convertedData[sheet] = convertToArrayFormat(docContent[sheet], getTableConfig(sheet, currentFormat))
             }
           }
           setData(convertedData)
-          const firstSheetWithData = SHEETS.find(s => Array.isArray(convertedData[s]) && convertedData[s].length > 0)
+          const firstSheetWithData = currentSheets.find(s => Array.isArray(convertedData[s]) && convertedData[s].length > 0)
           if (firstSheetWithData) setActiveSheet(firstSheetWithData)
         }
       } catch (err: any) { setErrorMsg("Gagal memuat data dari server.") } 
       finally { setIsLoading(false) }
     }
     fetchData()
-  }, [versionId, setData])
+  }, [versionId, prodiId, setData])
 
   const handleExport = async () => {
     setIsExporting(true)
-    try { await exportToExcel(data, activeSheet); toast({ title: "Export Berhasil", description: "File Excel diunduh." }) } 
+    try { await exportToExcel(data); toast({ title: "Export Berhasil", description: "File Excel diunduh." }) } 
     catch { toast({ variant: "destructive", title: "Gagal" }) } 
     finally { setIsExporting(false) }
   }
