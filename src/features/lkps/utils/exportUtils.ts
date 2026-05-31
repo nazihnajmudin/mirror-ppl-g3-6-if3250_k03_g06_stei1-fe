@@ -3,7 +3,7 @@ import { tableConfigs } from '../config/tableConfigs'
 
 export const exportToExcel = async (allData: Record<string, any[][]>, activeSheet?: string) => {
   try {
-    const response = await fetch('/template.xlsx')
+    const response = await fetch('/template-lkps.xlsx')
     if (!response.ok) throw new Error('Template not found')
     
     const arrayBuffer = await response.arrayBuffer()
@@ -25,6 +25,11 @@ export const exportToExcel = async (allData: Record<string, any[][]>, activeShee
           rowData.forEach((cellValue, colIndex) => {
             const colNumber = config.startCol + colIndex
             const cell = row.getCell(colNumber)
+            
+            if (cell.formula || (cell as any).sharedFormula || cell.type === ExcelJS.ValueType.Formula) {
+              return
+            }
+
             cell.value = cellValue === '' ? null : cellValue
           })
           row.commit()
