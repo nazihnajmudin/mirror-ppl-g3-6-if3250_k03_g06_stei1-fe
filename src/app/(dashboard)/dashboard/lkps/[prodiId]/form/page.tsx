@@ -169,6 +169,7 @@ export default function LKPSFormPage({
         title: "Success",
         description: "Dokumen berhasil disimpan sebagai draft"
       });
+      router.refresh();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -192,6 +193,7 @@ export default function LKPSFormPage({
         title: "Success",
         description: "Dokumen LKPS berhasil difinalisasi"
       });
+      router.refresh();
 
       setTimeout(() => {
         router.push(`/dashboard/lkps/${prodiId}`);
@@ -220,6 +222,7 @@ export default function LKPSFormPage({
       setSheets(sheets.map((s, i) => 
         i === currentSheetIndex ? { ...s, isCompleted: true } : s
       ));
+      router.refresh();
 
       toast({
         title: "Success",

@@ -18,13 +18,13 @@ interface ProdiWithAccreditation extends Omit<Prodi, 'accreditation'> {
   accreditation: AccreditationInfo | null;
 }
 
-type AccreditationStatus = "Aktif" | "Segera Habis" | "Kadaluarsa" | "Belum Diatur";
+type AccreditationStatus = "Aktif" | "Segera Habis" | "Kedaluwarsa" | "Belum Diatur";
 
 function getStatus(endDate?: string | null): AccreditationStatus {
   if (!endDate) return "Belum Diatur";
   const end = new Date(endDate);
   const now = new Date();
-  if (end < now) return "Kadaluarsa";
+  if (end < now) return "Kedaluwarsa";
   const diff = (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   if (diff <= 90) return "Segera Habis";
   return "Aktif";
@@ -34,7 +34,7 @@ function statusBadge(status: AccreditationStatus) {
   const map: Record<AccreditationStatus, string> = {
     Aktif: "bg-green-100 text-green-800",
     "Segera Habis": "bg-yellow-100 text-yellow-800",
-    Kadaluarsa: "bg-red-100 text-red-800",
+    Kedaluwarsa: "bg-red-100 text-red-800",
     "Belum Diatur": "bg-gray-100 text-gray-600",
   };
   return <Badge className={cn("text-xs font-medium", map[status])}>{status}</Badge>;
@@ -126,6 +126,10 @@ export default function ManajemenSertifikatPage() {
       toast({ title: "Berhasil", description: "Data akreditasi berhasil disimpan" });
       setEditing(null);
       await fetchData();
+      // Dispatch custom event to notify NotificationBell & WarningBanner to update instantly
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event('notifications-updated'));
+      }
     } catch (err: any) {
       toast({ variant: "destructive", title: "Gagal menyimpan", description: err.message });
     } finally {

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import apiClient from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { useUser } from "@/hooks/useUser";
+import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const TOKEN_KEY = "access_token";
@@ -31,7 +31,7 @@ const LEGACY_TOKEN_KEY = "accessToken";
 export function SidebarProdi() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user } = useUser();
+    const { user, logout } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -55,15 +55,12 @@ export function SidebarProdi() {
     const handleLogout = async () => {
         setIsLoggingOut(true);
         try {
-            await apiClient.post("/auth/logout");
+            await logout();
         } catch (err: unknown) {
             const message = getErrorMessage(err) || "Gagal logout";
             console.error("Logout error:", message);
         } finally {
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(LEGACY_TOKEN_KEY);
             setIsLoggingOut(false);
-            router.push("/login");
         }
     };
 
@@ -116,7 +113,11 @@ export function SidebarProdi() {
                 {filteredNavigation.map((item) => {
                     const Icon = item.icon;
                     const hrefPath = item.href.split('?')[0];
-                    const isActive = hrefPath !== '#' && (pathname === hrefPath || pathname.startsWith(hrefPath + '/'));
+                    let isActive = hrefPath !== '#' && (pathname === hrefPath || pathname.startsWith(hrefPath + '/'));
+
+                    if (hrefPath === "/dashboard/lkps" && (pathname.startsWith("/lkps") || pathname.startsWith("/dashboard/lkps"))) {
+                        isActive = true;
+                    }
 
                     return (
                         <Link

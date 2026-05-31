@@ -26,13 +26,13 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import apiClient from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { useUser } from "@/hooks/useUser";
+import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user } = useUser();
+    const { user, logout } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -55,16 +55,10 @@ export function Sidebar() {
     const handleLogout = async () => {
         setIsLoggingOut(true);
         try {
-            await apiClient.post("/auth/logout");
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("accessToken");
-            router.push("/login");
+            await logout();
         } catch (err: unknown) {
             const message = getErrorMessage(err) || "Gagal logout";
             console.error("Logout error:", message);
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("accessToken");
-            router.push("/login");
         } finally {
             setIsLoggingOut(false);
         }
@@ -143,7 +137,7 @@ export function Sidebar() {
                         <LayoutDashboard className="h-4 w-4" />
                         Dashboard Prodi
                     </Link>
-                    <Link href="/dashboard/lkps" onClick={(e) => handleNavigation(e, '/dashboard/lkps')} className={cn(globalItemClass, pathname.startsWith('/dashboard/lkps') ? activeGlobalClass : inactiveGlobalClass)}>
+                    <Link href="/dashboard/lkps" onClick={(e) => handleNavigation(e, '/dashboard/lkps')} className={cn(globalItemClass, (pathname.startsWith('/lkps') || pathname.startsWith('/dashboard/lkps')) ? activeGlobalClass : inactiveGlobalClass)}>
                         <FileSpreadsheet className="h-4 w-4" />
                         LKPS
                     </Link>
@@ -210,7 +204,7 @@ export function Sidebar() {
                             <User className="h-4 w-4" />
                             Profil Program Studi
                         </Link>
-                        <Link href="/eviden" onClick={(e) => handleNavigation(e, '/eviden')} className={cn(submenuBaseClass, pathname.startsWith('/eviden') ? activeSubmenuClass : inactiveSubmenuClass)}>
+                        <Link href="/dokumen-eviden" onClick={(e) => handleNavigation(e, '/dokumen-eviden')} className={cn(submenuBaseClass, pathname.startsWith('/dokumen-eviden') ? activeSubmenuClass : inactiveSubmenuClass)}>
                             <FolderOpen className="h-4 w-4" />
                             Dokumen Eviden
                         </Link>

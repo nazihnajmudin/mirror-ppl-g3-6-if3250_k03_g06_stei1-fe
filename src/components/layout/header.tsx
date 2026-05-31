@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useUser } from "@/hooks/useUser";
+import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell"
 
 const roleLabel: Record<string, string> = {
@@ -55,7 +55,7 @@ const navigation = [
 export function Header() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const pathname = usePathname();
-    const { user } = useUser();
+    const { user, logout } = useAuth();
 
     const displayName = user?.name || user?.email || "Memuat..."
     const displayRole = user ? (roleLabel[user.role] ?? user.role) : "Memuat..."
@@ -117,7 +117,10 @@ export function Header() {
                 </div>
                 
                 <div className="mt-auto p-4 border-t border-gray-200">
-                    <button className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+                    <button 
+                        onClick={() => logout()}
+                        className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                    >
                         <LogOut className="h-4 w-4" />
                         Logout
                     </button>
