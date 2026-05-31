@@ -43,9 +43,7 @@ export function ImportDialog({ prodiId, onImportSuccess, defaultPeriode }: Impor
     if (prodiId) formData.append('prodiId', prodiId)
     formData.append('file', file)
     try {
-      await apiClient.post('/lkps/confirm', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      await apiClient.post('/lkps/confirm', formData)
       toast({ title: 'Berhasil', description: `File LKPS periode ${defaultPeriode || currentYear} telah berhasil diupload.` })
       setFile(null)
       onImportSuccess()
