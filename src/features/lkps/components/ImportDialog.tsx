@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { UploadCloud, Loader2 } from 'lucide-react'
+import { UploadCloud, Loader2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import apiClient from '@/lib/api-client'
@@ -62,6 +62,13 @@ export function ImportDialog({ prodiId, onImportSuccess, defaultPeriode }: Impor
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2.5 items-start">
+        <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+        <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+          Pastikan format file Anda sesuai: <b>S1 Informatika</b> dan <b>S1 Sistem & Teknologi Informasi</b> menggunakan format <b>INFOKOM</b>, sedangkan prodi lainnya menggunakan format <b>LAMTEKNIK</b>.
+        </p>
+      </div>
+
       <div
         className={cn(
           'border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer group',

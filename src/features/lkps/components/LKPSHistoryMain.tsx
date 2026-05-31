@@ -1,6 +1,6 @@
 "use client"
 import React from 'react'
-import { FileSpreadsheet, Download, Loader2, ChevronLeft, ChevronRight, CheckCircle2, Clock, ArrowLeft, Lock, Unlock } from "lucide-react"
+import { FileSpreadsheet, Download, Loader2, ChevronLeft, ChevronRight, CheckCircle2, Clock, ArrowLeft, Lock, Unlock, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -72,9 +72,16 @@ export function LKPSHistoryMain({ logic, prodiId }: { logic: any, prodiId: strin
                               {v.status === 'FINAL' ? <Lock className="w-3 h-3"/> : <Unlock className="w-3 h-3"/>} {v.status || 'DRAFT'}
                           </span>
                           {canToggleLock && (
-                              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); logic.handleToggleStatus(v.id, v.status || 'DRAFT'); }} className={cn("h-6 px-2 text-[10px] font-bold rounded-md", v.status === 'FINAL' ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50" : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50")}>
-                                  {v.status === 'FINAL' ? "Buka Kunci" : "Finalisasi"}
-                              </Button>
+                              <div className="flex gap-1.5">
+                                <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); logic.handleToggleStatus(v.id, v.status || 'DRAFT'); }} className={cn("h-6 px-2 text-[10px] font-bold rounded-md", v.status === 'FINAL' ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50" : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50")}>
+                                    {v.status === 'FINAL' ? "Buka Kunci" : "Finalisasi"}
+                                </Button>
+                                {v.status !== 'FINAL' && (
+                                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); logic.handleDelete(v.id); }} className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                              </div>
                           )}
                         </div>
                       </div>

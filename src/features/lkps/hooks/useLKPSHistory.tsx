@@ -91,8 +91,19 @@ export function useLKPSHistory(prodiId: string) {
     } catch (error: any) { toast({ variant: "destructive", title: "Gagal", description: error?.response?.data?.message || "Terjadi kesalahan." }) }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus dokumen ini? Tindakan ini tidak dapat dibatalkan.')) return
+    try {
+        await apiClient.delete(`/lkps/${id}`)
+        toast({ title: "Berhasil", description: "Dokumen berhasil dihapus." })
+        refresh()
+    } catch (error: any) { 
+        toast({ variant: "destructive", title: "Gagal Menghapus", description: error?.response?.data?.message || "Terjadi kesalahan." }) 
+    }
+  }
+
   return {
     user, activePeriode, setActivePeriode, availablePeriods, activeVersionId, setActiveVersionId,
-    versions, allVersions, activeVersion, loading, refresh, handleExport, handleToggleStatus, router, format
+    versions, allVersions, activeVersion, loading, refresh, handleExport, handleToggleStatus, handleDelete, router, format
   }
 }
