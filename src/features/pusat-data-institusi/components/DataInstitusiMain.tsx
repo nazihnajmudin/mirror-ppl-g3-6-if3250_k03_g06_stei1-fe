@@ -121,7 +121,12 @@ export function DataInstitusiMain({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              {INSTITUSI_SHEETS.map((sheet) => (
+              {INSTITUSI_SHEETS.filter(sheet => {
+                const prodi = prodis.find((p: any) => p.id === selectedProdiId)
+                const isTeknik = prodi && prodi.category === 'TEKNIK'
+                if (isTeknik && sheet.key === '4b') return false // TEKNIK doesn't sync Tendik UPPS
+                return true
+              }).map((sheet) => (
                 <Button
                   key={sheet.key}
                   type="button"

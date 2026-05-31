@@ -36,7 +36,7 @@ export const INSTITUSI_SHEETS: InstitusiSheetConfig[] = [
     key: '2b',
     sheetName: '2b',
     title: 'Keuangan',
-    description: 'Data penggunaan dana yang diisi per program studi dan disinkronkan ke tabel 2b LKPS.',
+    description: 'Data penggunaan dana tingkat UPPS yang diisi per program studi dan disinkronkan secara otomatis ke form Keuangan LKPS Prodi.',
     rowType: 'fixed',
     fixedRows: KEUANGAN_FIXED_ROWS,
     labelKey: 'jenis_penggunaan',
@@ -52,8 +52,8 @@ export const INSTITUSI_SHEETS: InstitusiSheetConfig[] = [
   {
     key: '4b',
     sheetName: '4b',
-    title: 'Kepependidikan',
-    description: 'Data tenaga kependidikan yang diisi per program studi dan disinkronkan ke tabel 4b LKPS.',
+    title: 'Tenaga Kependidikan',
+    description: 'Data tenaga kependidikan tingkat UPPS yang diisi per program studi dan disinkronkan ke form Tendik LKPS Prodi (jika relevan).',
     rowType: 'free',
     columns: [
       { key: 'no', label: 'No.', type: 'number' },
@@ -72,7 +72,7 @@ export const INSTITUSI_SHEETS: InstitusiSheetConfig[] = [
     key: '6a',
     sheetName: '6a',
     title: 'Mahasiswa',
-    description: 'Data jumlah mahasiswa aktif yang diisi per program studi dan disinkronkan ke tabel 6a LKPS.',
+    description: 'Data jumlah mahasiswa aktif tingkat UPPS yang disinkronkan ke form Mahasiswa LKPS Prodi.',
     rowType: 'free',
     columns: [
       { key: 'no', label: 'No.', type: 'number' },
