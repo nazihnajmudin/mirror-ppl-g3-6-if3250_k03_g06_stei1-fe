@@ -1,15 +1,27 @@
 import axios, { AxiosError } from 'axios';
 
-// Type guard to check if an unknown error is an AxiosError
 export function isAxiosError(error: unknown): error is AxiosError {
   return axios.isAxiosError(error);
 }
 
-// Get error message from an unknown error object, with special handling for Axios errors
 export function getErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
-    const data = error.response?.data as any;
-    return data?.message || error.message || 'Terjadi kesalahan saat berkomunikasi dengan server';
+    let data = error.response?.data as any;
+
+    // Jika server tidak sengaja mengirimkan string JSON mentah
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        return data;
+      }
+    }
+
+    if (data && typeof data === 'object' && data.message) {
+      return data.message;
+    }
+    
+    return error.message || 'Terjadi kesalahan saat berkomunikasi dengan server';
   }
   
   if (error instanceof Error) {
@@ -19,7 +31,6 @@ export function getErrorMessage(error: unknown): string {
   return 'Terjadi kesalahan yang tidak diketahui';
 }
 
-// Get HTTP status code from Axios error, returns null if not an Axios error or status code is unavailable
 export function getErrorStatus(error: unknown): number | null {
   if (isAxiosError(error)) {
     return error.response?.status || null;
