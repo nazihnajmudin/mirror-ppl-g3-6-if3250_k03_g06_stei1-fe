@@ -10,6 +10,7 @@ export interface ProdiWithDashboard extends ProdiOption {
     simulationScore?: number
   }
   status?: "completed" | "in_progress"
+  isSafePeriod?: boolean
 }
 
 export function useDashboard() {
@@ -31,15 +32,27 @@ export function useDashboard() {
               const dashboardRes = await apiClient.get(`/prodi/${prodi.id}/dashboard`)
               const dashboardData = dashboardRes.data.data
               const score = dashboardData?.simulationScore || 0
+              
+              let isSafePeriod = false;
+              if (dashboardData?.accreditation?.endDate) {
+                const msInYear = 1000 * 60 * 60 * 24 * 365.25;
+                const yearsUntilExpiry = (new Date(dashboardData.accreditation.endDate).getTime() - Date.now()) / msInYear;
+                if (yearsUntilExpiry > 1.5) {
+                  isSafePeriod = true;
+                }
+              }
+
               return {
                 ...prodi,
                 dashboard: dashboardData,
                 status: score >= 361 ? ("completed" as const) : ("in_progress" as const),
+                isSafePeriod,
               }
             } catch (err) {
               return {
                 ...prodi,
                 status: "in_progress" as const,
+                isSafePeriod: false,
               }
             }
           })

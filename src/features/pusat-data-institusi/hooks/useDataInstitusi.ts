@@ -2,39 +2,53 @@ import { useState, useCallback, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { getErrorMessage } from "@/lib/errors"
 import apiClient from "@/lib/api-client"
-import { getAllProdi } from "@/lib/api-prodi"
+import { getMyProdi } from "@/lib/api-prodi"
 import type { Prodi } from "@/types/api.types"
-import {
-  INSTITUSI_SHEETS,
-  INSTITUSI_SHEET_MAP,
-  getDefaultRowsForSheet,
-  normalizeSheetRows,
-  createBlankFreeRow,
-} from "@/config/institusi-sheets.config"
 
 type SheetRows = Array<Record<string, any>>
 
+const INSTITUSI_SHEETS_MAPPING: Record<string, { key: string; title: string; description: string }[]> = {
+  INFOKOM: [
+    { key: '4a', title: 'Tabel 4.a: Keuangan', description: 'Data penggunaan dana tingkat UPPS' },
+    { key: '3c', title: 'Tabel 3.c: Tenaga Kependidikan', description: 'Data tenaga kependidikan tingkat UPPS' },
+    { key: '2b', title: 'Tabel 2.b: Mahasiswa Asing', description: 'Data mahasiswa asing tingkat UPPS' },
+  ],
+  TEKNIK: [
+    { key: '4a', title: 'Tabel 4.a: Keuangan', description: 'Data penggunaan dana tingkat UPPS' },
+    { key: '3c', title: 'Tabel 3.c: Tenaga Kependidikan', description: 'Data tenaga kependidikan tingkat UPPS' },
+    { key: '2b', title: 'Tabel 2.b: Jumlah Mahasiswa', description: 'Data jumlah mahasiswa tingkat UPPS' },
+  ]
+};
+
+import { useLKPSConfig } from "@/features/lkps/hooks/useLKPSConfig"
+
 export function useDataInstitusi() {
   const { toast } = useToast()
+  const { getFormatFromProdiName } = useLKPSConfig()
 
-  const [periode] = useState("2025/2026")
+  const [periode, setPeriode] = useState("")
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([])
   const [prodis, setProdis] = useState<Prodi[]>([])
   const [selectedProdiId, setSelectedProdiId] = useState<string>("")
-  const [selectedSheetKey, setSelectedSheetKey] = useState<string>(INSTITUSI_SHEETS[0].key)
-  const [sheetDataByKey, setSheetDataByKey] = useState<Record<string, SheetRows>>({})
+  const [selectedSheetKey, setSelectedSheetKey] = useState<string>("")
+  
+  const [sheetConfig, setSheetConfig] = useState<any>(null)
+  const [sheetData, setSheetData] = useState<SheetRows>([])
 
   const [loadingProdi, setLoadingProdi] = useState(true)
   const [loadingSheet, setLoadingSheet] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentSheet = INSTITUSI_SHEET_MAP[selectedSheetKey] || INSTITUSI_SHEETS[0]
-  const currentRows = sheetDataByKey[selectedSheetKey] ?? getDefaultRowsForSheet(currentSheet)
+  const selectedProdi = prodis.find(p => p.id === selectedProdiId);
+  const selectedProdiCategory = selectedProdi ? getFormatFromProdiName(selectedProdi.fullname) : 'TEKNIK';
+  const availableSheets = INSTITUSI_SHEETS_MAPPING[selectedProdiCategory] || INSTITUSI_SHEETS_MAPPING.TEKNIK;
+  const currentSheetMetadata = availableSheets.find(s => s.key === selectedSheetKey) || availableSheets[0];
 
   const loadProdi = useCallback(async () => {
     setLoadingProdi(true)
     try {
-      const list = await getAllProdi()
+      const list = await getMyProdi()
       setProdis(list)
       setSelectedProdiId((current) => current || list[0]?.id || "")
     } catch (err: unknown) {
@@ -45,42 +59,46 @@ export function useDataInstitusi() {
     }
   }, [])
 
-  const loadSheet = useCallback(
-    async (sheetKey: string, force = false) => {
-      if (!selectedProdiId) return
+  const loadSheet = useCallback(async () => {
+    if (!selectedProdiId || !periode || !selectedSheetKey) return;
+    
+    setLoadingSheet(true)
+    setError(null)
+    setSheetConfig(null);
+    setSheetData([]);
 
-      if (!force && sheetDataByKey[sheetKey]) return
+    try {
+      // 1. Fetch config from LKPS
+      const configRes = await apiClient.get(`/lkps/config/${selectedSheetKey}?format=${selectedProdiCategory}`);
+      const config = configRes.data?.data;
+      setSheetConfig(config);
 
-      setLoadingSheet(true)
-      setError(null)
-
-      try {
-        const response = await apiClient.get(
-          `/institusi?periode=${periode}&sheetName=${sheetKey}&prodiId=${selectedProdiId}`
-        )
-        const fetchedData = response.data?.data
-        const sheetConfig = INSTITUSI_SHEET_MAP[sheetKey]
-
-        if (fetchedData && fetchedData.length > 0 && fetchedData[0].data) {
-          setSheetDataByKey((prev) => ({
-            ...prev,
-            [sheetKey]: normalizeSheetRows(sheetConfig, fetchedData[0].data),
-          }))
+      // 2. Fetch data from Institusi
+      const response = await apiClient.get(
+        `/institusi?periode=${periode}&sheetName=${selectedSheetKey}&prodiId=${selectedProdiId}`
+      )
+      const fetchedData = response.data?.data
+      
+      if (fetchedData && fetchedData.length > 0 && fetchedData[0].data) {
+        setSheetData(fetchedData[0].data);
+      } else {
+        // Init empty data based on config
+        if (config.rowType === 'fixed' && config.fixedRows) {
+           setSheetData(config.fixedRows.map((label: string, idx: number) => ({
+             no: idx + 1,
+             [config.columns[1]?.key || 'jenis']: label
+           })));
         } else {
-          setSheetDataByKey((prev) => ({
-            ...prev,
-            [sheetKey]: getDefaultRowsForSheet(sheetConfig),
-          }))
+           setSheetData([{ no: 1 }]);
         }
-      } catch (err: unknown) {
-        const message = getErrorMessage(err) || "Gagal memuat data pusat institusi."
-        setError(message)
-      } finally {
-        setLoadingSheet(false)
       }
-    },
-    [periode, selectedProdiId, sheetDataByKey]
-  )
+    } catch (err: unknown) {
+      const message = getErrorMessage(err) || "Gagal memuat data pusat institusi."
+      setError(message)
+    } finally {
+      setLoadingSheet(false)
+    }
+  }, [periode, selectedProdiId, selectedSheetKey])
 
   useEffect(() => {
     void loadProdi()
@@ -88,70 +106,36 @@ export function useDataInstitusi() {
 
   useEffect(() => {
     if (!selectedProdiId) return
-    setSheetDataByKey({})
+    
+    const fetchPeriods = async () => {
+      try {
+        const res = await apiClient.get(`/lkps/available-periods/${selectedProdiId}`);
+        const periods = res.data?.data || [];
+        setAvailablePeriods(periods);
+        if (periods.length > 0 && !periods.includes(periode)) {
+          setPeriode(periods[0]);
+        } else if (periods.length === 0) {
+          setPeriode("");
+        }
+      } catch (err) {
+        console.error("Gagal load available periods", err);
+      }
+    };
+    fetchPeriods();
   }, [selectedProdiId])
 
+  // Reset selectedSheetKey when prodi category changes
   useEffect(() => {
-    if (!selectedProdiId) return
-    void loadSheet(selectedSheetKey)
-  }, [selectedProdiId, selectedSheetKey, loadSheet])
+    if (!availableSheets.find(s => s.key === selectedSheetKey)) {
+      setSelectedSheetKey(availableSheets[0].key);
+    }
+  }, [selectedProdiId, availableSheets, selectedSheetKey])
 
-  const updateRowValue = (
-    sheetKey: string,
-    rowIndex: number,
-    field: string,
-    value: string | number | boolean
-  ) => {
-    setSheetDataByKey((prev) => {
-      const sheet = INSTITUSI_SHEET_MAP[sheetKey]
-      const rows = prev[sheetKey] ?? getDefaultRowsForSheet(sheet)
-      const nextRows = rows.map((row, index) => {
-        if (index !== rowIndex) return row
-        if (field === "no") return row
-
-        const column = sheet.columns.find((col) => col.key === field)
-        if (!column) return row
-
-        let nextValue: any = value
-        if (column.type === "number") {
-          nextValue = value === "" ? "" : Number(value)
-        }
-
-        return { ...row, [field]: nextValue }
-      })
-
-      return { ...prev, [sheetKey]: nextRows }
-    })
-  }
-
-  const addRow = () => {
-    if (currentSheet.rowType !== "free") return
-
-    setSheetDataByKey((prev) => {
-      const rows = prev[selectedSheetKey] ?? getDefaultRowsForSheet(currentSheet)
-      return {
-        ...prev,
-        [selectedSheetKey]: [...rows, createBlankFreeRow(currentSheet, rows.length + 1)],
-      }
-    })
-  }
-
-  const removeRow = (rowIndex: number) => {
-    if (currentSheet.rowType !== "free") return
-
-    setSheetDataByKey((prev) => {
-      const rows = prev[selectedSheetKey] ?? getDefaultRowsForSheet(currentSheet)
-      const nextRows = rows.filter((_, index) => index !== rowIndex).map((row, index) => ({
-        ...row,
-        no: index + 1,
-      }))
-
-      return {
-        ...prev,
-        [selectedSheetKey]: nextRows.length > 0 ? nextRows : [createBlankFreeRow(currentSheet, 1)],
-      }
-    })
-  }
+  useEffect(() => {
+    if (selectedProdiId && periode && selectedSheetKey) {
+      void loadSheet();
+    }
+  }, [selectedProdiId, periode, selectedSheetKey, loadSheet])
 
   const handleSync = async () => {
     setSaving(true)
@@ -159,24 +143,18 @@ export function useDataInstitusi() {
 
     try {
       if (!selectedProdiId) throw new Error("Program studi wajib dipilih sebelum sinkronisasi.")
+      if (!periode) throw new Error("Periode tidak valid.")
 
-      const normalizedRows = normalizeSheetRows(currentSheet, currentRows)
-
-      await apiClient.post("/institusi/sync", {
+      await apiClient.post('/institusi/sync', {
+        prodiId: selectedProdiId,
         periode,
         sheetName: selectedSheetKey,
-        prodiId: selectedProdiId,
-        data: normalizedRows,
-      })
-
-      setSheetDataByKey((prev) => ({
-        ...prev,
-        [selectedSheetKey]: normalizedRows,
-      }))
+        data: sheetData,
+      });
 
       toast({
         title: "Sinkronisasi Berhasil",
-        description: `Data ${currentSheet.title.toLowerCase()} berhasil disinkronkan ke LKPS.`,
+        description: `Data ${currentSheetMetadata.title} berhasil disinkronkan ke LKPS.`,
         variant: "default",
       })
     } catch (err: unknown) {
@@ -193,8 +171,9 @@ export function useDataInstitusi() {
   }
 
   return {
-    periode, prodis, selectedProdiId, setSelectedProdiId, selectedSheetKey, setSelectedSheetKey,
-    loadingProdi, loadingSheet, saving, error, currentSheet, currentRows,
-    loadSheet, updateRowValue, addRow, removeRow, handleSync
+    periode, setPeriode, availablePeriods, prodis, selectedProdiId, setSelectedProdiId, selectedSheetKey, setSelectedSheetKey,
+    loadingProdi, loadingSheet, saving, error, 
+    sheetConfig, sheetData, setSheetData, availableSheets, currentSheetMetadata,
+    loadSheet, handleSync
   }
 }

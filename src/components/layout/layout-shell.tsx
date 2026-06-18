@@ -1,6 +1,7 @@
 "use client"
 
 import { ReactNode, useState } from "react"
+import { usePathname } from "next/navigation"
 
 import { AppHeader } from "./app-header"
 import { AppSidebar } from "./app-sidebar"
@@ -17,6 +18,7 @@ export function LayoutShell({
 }: Props) {
   const [mobileOpen, setMobileOpen] =
     useState(false)
+  const pathname = usePathname()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -48,12 +50,18 @@ export function LayoutShell({
         </div>
 
         {/* Main Content */}
-        <main className="flex-1">
-          <div className="p-4 md:p-8">
-            <div className="mx-auto max-w-7xl">
+        <main className="flex-1 flex flex-col relative">
+          {pathname?.includes('/report') && pathname?.includes('/lkps') ? (
+            <div className="flex-1 flex flex-col absolute inset-0 overflow-hidden bg-gray-50">
               {children}
             </div>
-          </div>
+          ) : (
+            <div className="p-4 md:p-8">
+              <div className="mx-auto max-w-7xl">
+                {children}
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

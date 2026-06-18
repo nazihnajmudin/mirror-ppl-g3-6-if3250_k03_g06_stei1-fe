@@ -10,12 +10,7 @@ export function useTemplateDokumen() {
   const [templates, setTemplates] = useState<any[]>([])
   const [isFetching, setIsFetching] = useState(true)
 
-  const [isDragging, setIsDragging] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchTemplates = async () => {
     setIsFetching(true)
@@ -48,46 +43,17 @@ export function useTemplateDokumen() {
     )
   }
 
-  const handleFileSelection = (
-    file: File,
-    type: string
-  ) => {
-    const ext = file.name
-      .substring(file.name.lastIndexOf("."))
-      .toLowerCase()
-
-    const isLED = type === "LED"
-
-    if (isLED && ![".doc", ".docx"].includes(ext)) {
-      alert("Hanya menerima file Word!")
-      return
-    }
-
-    if (!isLED && ![".xls", ".xlsx"].includes(ext)) {
-      alert("Hanya menerima file Excel!")
-      return
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Ukuran file maksimal 10MB!")
-      return
-    }
-
-    setSelectedFile(file)
-  }
-
   const handleUpload = async (
     category: string,
-    type: string
+    type: string,
+    fileToUpload: File
   ) => {
-    if (!selectedFile) return
-
-    setIsUploading(true)
+    if (!fileToUpload) return
 
     try {
       const formData = new FormData()
 
-      formData.append("file", selectedFile)
+      formData.append("file", fileToUpload)
       formData.append(
         "name",
         `Template ${type} LAM ${category}`
@@ -109,16 +75,13 @@ export function useTemplateDokumen() {
         `Template ${type} LAM ${category} berhasil diunggah!`
       )
 
-      setSelectedFile(null)
-
       fetchTemplates()
     } catch (error: any) {
       alert(
         error?.response?.data?.message ||
           "Gagal mengunggah template."
       )
-    } finally {
-      setIsUploading(false)
+      throw error // Re-throw so component knows it failed
     }
   }
 
@@ -203,17 +166,7 @@ export function useTemplateDokumen() {
     isAdmin,
     displayCategories,
     getTemplate,
-
-    isDragging,
-    setIsDragging,
-
-    selectedFile,
-    isUploading,
     isDeleting,
-
-    fileInputRef,
-
-    handleFileSelection,
     handleUpload,
     handleDelete,
     handleDownload,

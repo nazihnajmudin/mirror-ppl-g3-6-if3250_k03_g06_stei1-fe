@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils"
 import type { ProdiWithDashboard } from "../hooks/useDashboard"
 
 export function DashboardTable({ prodis }: { prodis: ProdiWithDashboard[] }) {
-  const [activeTab, setActiveTab] = useState<"Selesai" | "Progress">("Selesai")
+  const [activeTab, setActiveTab] = useState<"Selesai" | "Progress" | "Aman">("Progress")
   
-  const prodiSelesai = prodis.filter((p) => p.status === "completed")
-  const prodiProgress = prodis.filter((p) => p.status === "in_progress")
+  const prodiSelesai = prodis.filter((p) => p.status === "completed" && !p.isSafePeriod)
+  const prodiProgress = prodis.filter((p) => p.status === "in_progress" && !p.isSafePeriod)
+  const prodiAman = prodis.filter((p) => p.isSafePeriod)
 
   return (
     <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -40,6 +41,17 @@ export function DashboardTable({ prodis }: { prodis: ProdiWithDashboard[] }) {
           >
             Progress ({prodiProgress.length})
           </button>
+          <button
+            onClick={() => setActiveTab("Aman")}
+            className={cn(
+              "px-5 py-1.5 text-xs font-bold rounded-full transition-all shadow-sm",
+              activeTab === "Aman"
+                ? "bg-[#06b6d4] text-white"
+                : "bg-transparent text-gray-500 hover:text-gray-700 shadow-none"
+            )}
+          >
+            Masa Aman ({prodiAman.length})
+          </button>
         </div>
       </CardHeader>
 
@@ -51,6 +63,10 @@ export function DashboardTable({ prodis }: { prodis: ProdiWithDashboard[] }) {
         ) : activeTab === "Progress" && prodiProgress.length === 0 ? (
           <div className="px-6 py-8 text-center text-gray-500">
             <p className="text-sm">Belum ada program studi dalam progress</p>
+          </div>
+        ) : activeTab === "Aman" && prodiAman.length === 0 ? (
+          <div className="px-6 py-8 text-center text-gray-500">
+            <p className="text-sm">Tidak ada program studi dalam masa aman</p>
           </div>
         ) : (
           <Table>
@@ -77,14 +93,16 @@ export function DashboardTable({ prodis }: { prodis: ProdiWithDashboard[] }) {
                   </>
                 )}
 
-                <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-4 py-3 tracking-wider text-right w-24">
-                  SKOR SIMULASI
-                </TableHead>
+                {activeTab !== "Aman" && (
+                  <TableHead className="uppercase text-[11px] font-bold text-gray-400 px-4 py-3 tracking-wider text-right w-24">
+                    SKOR SIMULASI
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {(activeTab === "Selesai" ? prodiSelesai : prodiProgress).map((prodi) => (
+              {(activeTab === "Selesai" ? prodiSelesai : activeTab === "Progress" ? prodiProgress : prodiAman).map((prodi) => (
                 <TableRow key={prodi.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
                   <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -159,11 +177,13 @@ export function DashboardTable({ prodis }: { prodis: ProdiWithDashboard[] }) {
                     </>
                   )}
 
-                  <TableCell className="px-4 py-3 text-right">
-                    <span className="text-[14px] font-bold text-gray-900">
-                      {prodi.dashboard?.simulationScore || 0}
-                    </span>
-                  </TableCell>
+                  {activeTab !== "Aman" && (
+                    <TableCell className="px-4 py-3 text-right">
+                      <span className="text-[14px] font-bold text-gray-900">
+                        {prodi.dashboard?.simulationScore || 0}
+                      </span>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

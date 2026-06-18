@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs'
-import { tableConfigs } from '../config/tableConfigs'
 
 const extractCellValue = (cell: any): any => {
   let value = cell?.value;
@@ -27,7 +26,7 @@ const findDataStartRow = (worksheet: any, maxRows = 40): number => {
   return 10; 
 };
 
-export const exportToExcel = async (allData: Record<string, any[][]>, activeSheet?: string) => {
+export const exportToExcel = async (allData: Record<string, any[][]>, tableConfigs: Record<string, any>, activeSheet?: string) => {
   try {
     const response = await fetch('/template-lkps.xlsx')
     if (!response.ok) throw new Error('Template not found')

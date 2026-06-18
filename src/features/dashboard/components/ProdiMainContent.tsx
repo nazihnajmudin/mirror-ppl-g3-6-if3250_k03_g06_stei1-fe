@@ -5,17 +5,72 @@ import { AlertCircle, Activity, FileText, FileSpreadsheet, ChevronDown, TablePro
 export function ProdiMainContent({ 
   dashboard, 
   formContentLoading, computedCriteria, setSelectedCriterion, setSelectedSubItem,
-  computedLkpsCriteria, lkpsProgressLoading 
+  computedLkpsCriteria, lkpsProgressLoading, isSafePeriod
 }: any) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'LED' | 'LKPS'>('LED')
   const [expandedLkps, setExpandedLkps] = useState<string | null>(null)
+  const [expandedLed, setExpandedLed] = useState<string | null>(null)
 
   const getProgressColor = (progress: number) => {
     if (progress === 100) return "bg-gray-900"
     if (progress >= 75) return "bg-blue-500"
     if (progress >= 50) return "bg-yellow-500"
     return "bg-red-500"
+  }
+
+  if (isSafePeriod) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-10 text-center order-2 md:order-1">
+          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+            <Activity className="w-8 h-8 text-emerald-500" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Semua Terkendali</h3>
+          <p className="text-sm text-gray-500 max-w-[280px]">
+            Tidak ada dokumen LED atau LKPS yang mendesak untuk diselesaikan saat ini.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden order-1 md:order-2">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-bold text-gray-900">Aktivitas Terbaru</h2>
+          </div>
+          <div className="px-5 py-2 max-h-[300px] overflow-y-auto">
+            {dashboard?.recentActivities?.length === 0 ? (
+              <div className="text-center py-8">
+                <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-xs text-gray-500">Belum ada aktivitas</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {dashboard?.recentActivities?.map((activity: any) => (
+                  <div key={activity.id} className="flex items-start gap-3 py-3">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
+                      <span className="text-[10px] font-bold text-blue-600">
+                        {activity.user.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-gray-900 truncate">{activity.user}</p>
+                        <span className="text-[10px] text-gray-400 flex-shrink-0 flex items-center gap-1">
+                          {new Date(activity.timestamp).toLocaleDateString("id-ID", {
+                            hour: "2-digit", minute: "2-digit"
+                          })}
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{activity.action}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -51,26 +106,63 @@ export function ProdiMainContent({
             formContentLoading ? (
               <p className="text-xs text-gray-400 text-center py-10 animate-pulse">Memuat data progress LED...</p>
             ) : (
-              computedCriteria.map((criterion: any) => (
-                <button
-                  key={`led-${criterion.id}`}
-                  onClick={() => { setSelectedCriterion(criterion); setSelectedSubItem(null) }}
-                  className="w-full text-left group"
-                >
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
-                      {criterion.code} — {criterion.name}
-                    </span>
-                    <span className="text-xs font-bold text-gray-600 ml-2 flex-shrink-0">{criterion.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2 group-hover:bg-gray-200 transition-colors">
-                    <div
-                      className={`h-2 rounded-full ${getProgressColor(criterion.progress)} group-hover:opacity-90 transition-opacity`}
-                      style={{ width: `${criterion.progress}%` }}
-                    />
-                  </div>
-                </button>
-              ))
+              <div className="space-y-3">
+                {computedCriteria.map((criterion: any) => {
+                  const isExpanded = expandedLed === criterion.id
+
+                  return (
+                    <div key={`led-${criterion.id}`} className="w-full text-left bg-white rounded-lg transition-all">
+                      <button 
+                        onClick={() => setExpandedLed(isExpanded ? null : criterion.id)}
+                        className="w-full group pb-2"
+                      >
+                        <div className="flex justify-between items-center mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-600' : 'group-hover:text-gray-600'}`} />
+                            <span className={`text-xs font-semibold transition-colors ${isExpanded ? 'text-blue-700' : 'text-gray-800 group-hover:text-blue-700'}`}>
+                              {criterion.code} — {criterion.name}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-600 ml-2 flex-shrink-0">
+                            {criterion.progress}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${getProgressColor(criterion.progress)}`}
+                            style={{ width: `${criterion.progress}%` }}
+                          />
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-2 mb-4 pl-6 pr-2 space-y-1.5 border-l-2 border-blue-100 ml-2 animate-in slide-in-from-top-2 duration-200">
+                          {criterion.subsections.map((sub: any) => (
+                            <button
+                              key={sub.id}
+                              onClick={() => { setSelectedCriterion(criterion); setSelectedSubItem(sub) }}
+                              className="w-full flex items-center justify-between p-2 rounded-md hover:bg-blue-50 text-left transition-colors group/sub"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-3.5 h-3.5 text-gray-400 group-hover/sub:text-blue-600" />
+                                <span className="text-[11px] font-medium text-gray-600 group-hover/sub:text-blue-800">
+                                  {sub.name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-gray-400">{sub.filled ? '100%' : '0%'}</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 group-hover/sub:bg-blue-100 group-hover/sub:text-blue-700 transition-colors">
+                                  Lihat Detail →
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             )
           )}
 

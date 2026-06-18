@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Download,
@@ -23,8 +23,48 @@ export function TemplateCard({
   logic: any
 }) {
   const config = getTemplateConfig(type)
-
   const IconComponent = config.icon
+
+  const [isDragging, setIsDragging] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelection = (file: File) => {
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase()
+    const isLED = type === "LED"
+
+    if (isLED && ![".doc", ".docx"].includes(ext)) {
+      alert("Hanya menerima file Word!")
+      return false
+    }
+
+    if (!isLED && ![".xls", ".xlsx"].includes(ext)) {
+      alert("Hanya menerima file Excel (.xls, .xlsx)!")
+      return false
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Ukuran file maksimal 10MB!")
+      return false
+    }
+
+    setSelectedFile(file)
+    return true
+  }
+
+  const handleUploadClick = async () => {
+    if (!selectedFile) return
+    setIsUploading(true)
+    try {
+      await logic.handleUpload(category, type, selectedFile)
+      setSelectedFile(null)
+    } catch (e) {
+      // error handled by hook
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   if (!template) {
     if (logic.isAdmin) {
@@ -37,38 +77,36 @@ export function TemplateCard({
           <div
             className={cn(
               "flex-1 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors mb-4",
-              logic.isDragging
+              isDragging
                 ? "border-blue-500 bg-blue-50/50"
                 : "border-gray-200 hover:bg-gray-50"
             )}
             onDragOver={(e) => {
               e.preventDefault()
-              logic.setIsDragging(true)
+              setIsDragging(true)
             }}
             onDragLeave={(e) => {
               e.preventDefault()
-              logic.setIsDragging(false)
+              setIsDragging(false)
             }}
             onDrop={(e) => {
               e.preventDefault()
-              logic.setIsDragging(false)
+              setIsDragging(false)
 
               if (e.dataTransfer.files?.length) {
-                logic.handleFileSelection(
-                  e.dataTransfer.files[0],
-                  type
-                )
+                handleFileSelection(e.dataTransfer.files[0])
               }
             }}
-            onClick={() =>
-              logic.fileInputRef.current?.click()
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
           >
             <UploadCloud className="w-8 h-8 text-blue-600 mb-3" />
 
-            {logic.selectedFile ? (
+            {selectedFile ? (
               <div className="text-sm font-medium text-blue-600 truncate max-w-full px-2">
-                {logic.selectedFile.name}
+                {selectedFile.name}
               </div>
             ) : (
               <p className="text-xs font-medium text-gray-600">
@@ -80,28 +118,22 @@ export function TemplateCard({
           <input
             type="file"
             className="hidden"
-            ref={logic.fileInputRef}
+            ref={fileInputRef}
             accept={config.accept}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             onChange={(e) =>
-              e.target.files &&
-              logic.handleFileSelection(
-                e.target.files[0],
-                type
-              )
+              e.target.files && handleFileSelection(e.target.files[0])
             }
           />
 
           <Button
-            onClick={() =>
-              logic.handleUpload(category, type)
-            }
-            disabled={
-              !logic.selectedFile ||
-              logic.isUploading
-            }
+            onClick={handleUploadClick}
+            disabled={!selectedFile || isUploading}
             className="h-10 rounded-lg font-bold bg-gray-900 hover:bg-gray-800 text-white"
           >
-            {logic.isUploading ? (
+            {isUploading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               `Upload Template ${type}`
@@ -133,19 +165,11 @@ export function TemplateCard({
 
         {logic.isAdmin && (
           <button
-            onClick={() =>
-              logic.handleDelete(
-                template.id,
-                category,
-                type
-              )
-            }
+            onClick={() => logic.handleDelete(template.id, category, type)}
             disabled={logic.isDeleting}
             className="text-[11px] font-bold text-red-500 hover:text-red-700"
           >
-            {logic.isDeleting
-              ? "Menghapus..."
-              : "Hapus"}
+            {logic.isDeleting ? "Menghapus..." : "Hapus"}
           </button>
         )}
       </div>
@@ -154,9 +178,7 @@ export function TemplateCard({
         <IconComponent
           className={cn(
             "w-12 h-12 mb-2",
-            config.isLED
-              ? "text-blue-500"
-              : "text-emerald-600"
+            config.isLED ? "text-blue-500" : "text-emerald-600"
           )}
         />
 
@@ -166,12 +188,7 @@ export function TemplateCard({
 
         <div className="absolute inset-0 bg-gray-900/50 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center backdrop-blur-[2px]">
           <Button
-            onClick={() =>
-              logic.handleDownload(
-                template,
-                config.extension
-              )
-            }
+            onClick={() => logic.handleDownload(template, config.extension)}
             className="rounded-lg font-bold bg-white hover:bg-gray-100 text-gray-900 border border-gray-200 shadow-xl"
           >
             <Download className="w-4 h-4 mr-2 text-blue-600" />
@@ -182,12 +199,7 @@ export function TemplateCard({
 
       {!logic.isAdmin ? (
         <Button
-          onClick={() =>
-            logic.handleDownload(
-              template,
-              config.extension
-            )
-          }
+          onClick={() => logic.handleDownload(template, config.extension)}
           className="h-10 rounded-lg font-bold bg-gray-900 hover:bg-gray-800 text-white"
         >
           <Download className="w-4 h-4 mr-2" />
@@ -198,28 +210,38 @@ export function TemplateCard({
           <input
             type="file"
             className="hidden"
-            ref={logic.fileInputRef}
+            ref={fileInputRef}
             accept={config.accept}
-            onChange={(e) => {
-              if (e.target.files) {
-                logic.handleFileSelection(
-                  e.target.files[0],
-                  type
-                )
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            onChange={async (e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                const file = e.target.files[0]
+                const isValid = handleFileSelection(file)
+                if (!isValid) return;
 
-                logic.handleUpload(category, type)
+                setIsUploading(true)
+                try {
+                  await logic.handleUpload(category, type, file)
+                } catch (err) {
+                  // error handled by hook
+                } finally {
+                  setIsUploading(false)
+                }
               }
             }}
           />
 
           <Button
-            onClick={() =>
-              logic.fileInputRef.current?.click()
-            }
-            disabled={logic.isUploading}
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+            disabled={isUploading}
             className="h-10 rounded-lg font-bold bg-gray-900 hover:bg-gray-800 text-white"
           >
-            {logic.isUploading ? (
+            {isUploading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               `Ubah Template ${type}`

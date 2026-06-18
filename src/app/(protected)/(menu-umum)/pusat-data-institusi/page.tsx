@@ -23,17 +23,17 @@ export default function PusatDataInstitusiPage() {
         {/* Action Atas (Mirip Manajemen Akun) */}
         <div className="flex items-center gap-2 flex-wrap">
           <Button 
-            onClick={() => void logic.loadSheet(logic.selectedSheetKey, true)} 
+            onClick={() => void logic.loadSheet()} 
             variant="outline" 
             className="rounded-full font-bold text-sm h-10 px-5" 
-            disabled={logic.loadingProdi || logic.loadingSheet || logic.saving}
+            disabled={logic.loadingProdi || logic.loadingSheet || logic.saving || logic.availablePeriods.length === 0}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${logic.loadingSheet ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Button
             onClick={logic.handleSync}
-            disabled={logic.loadingProdi || logic.loadingSheet || logic.saving || !logic.selectedProdiId}
+            disabled={logic.loadingProdi || logic.loadingSheet || logic.saving || !logic.selectedProdiId || logic.availablePeriods.length === 0}
             className="bg-black hover:bg-gray-800 text-white rounded-full px-6 py-2.5 h-10 text-sm font-bold flex items-center gap-2 shadow-md transition-colors"
           >
             {logic.saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}

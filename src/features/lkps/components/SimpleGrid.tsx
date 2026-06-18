@@ -5,8 +5,18 @@ import { Input } from "@/components/ui/input"
 
 export default function SimpleGrid({ data, config, onDataChange }: any) {
   const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
-    const newData = [...data]; if (!newData[rowIndex]) newData[rowIndex] = [];
-    newData[rowIndex][colIndex] = value; onDataChange(newData);
+    const newData = [...data];
+    if (!newData[rowIndex]) newData[rowIndex] = {};
+    
+    let key: string | number = colIndex;
+    if (config.keys && config.keys[colIndex]) {
+      key = config.keys[colIndex];
+    } else if (config.columns && config.columns[colIndex]?.key) {
+      key = config.columns[colIndex].key;
+    }
+    
+    newData[rowIndex] = { ...newData[rowIndex], [key]: value };
+    onDataChange(newData);
   }
   const colCount = config.columnLabels?.length || config.columns?.length || 10;
   
@@ -27,12 +37,24 @@ export default function SimpleGrid({ data, config, onDataChange }: any) {
         </TableRow>
       ))
     }
-    const labels = config.columnLabels && config.columnLabels.length > 0 ? config.columnLabels : Array.from({ length: config.columns?.length || 10 }).map((_, i) => `Kolom ${i + 1}`)
+    const labels = config.columnLabels && config.columnLabels.length > 0 
+      ? config.columnLabels 
+      : config.columns && config.columns.length > 0
+        ? config.columns.map((c: any) => c.label)
+        : Array.from({ length: 10 }).map((_, i) => `Kolom ${i + 1}`)
     return (
       <TableRow className="bg-gray-50/50">
-        {labels.map((label: string, i: number) => (
-          <TableHead key={i} className="border border-gray-200 uppercase tracking-wider text-[11px] font-bold text-gray-500 py-3 px-3">{label}</TableHead>
-        ))}
+        {labels.map((label: string, i: number) => {
+          const isNo = label.toLowerCase() === 'no' || label.toLowerCase() === 'no.';
+          return (
+            <TableHead 
+              key={i} 
+              className={`border border-gray-200 uppercase tracking-wider text-[11px] font-bold text-gray-500 py-3 px-3 ${isNo ? 'w-12 sticky left-0 z-20 bg-gray-50/50 text-center' : ''}`}
+            >
+              {label}
+            </TableHead>
+          );
+        })}
       </TableRow>
     )
   }
@@ -45,14 +67,34 @@ export default function SimpleGrid({ data, config, onDataChange }: any) {
           {data.length === 0 ? (
             <TableRow><TableCell colSpan={colCount} className="text-center py-12 text-sm font-medium text-gray-400">Tidak ada data. Klik "Tambah Baris" untuk memulai.</TableCell></TableRow>
           ) : (
-            data.map((row: any[], rowIndex: number) => (
+            data.map((row: any, rowIndex: number) => (
               <TableRow key={rowIndex} className="hover:bg-gray-50/30 transition-colors">
-                <TableCell className="bg-gray-50/50 border border-gray-200 text-center font-bold text-gray-500 text-xs w-12 sticky left-0 z-10">{rowIndex + 1}</TableCell>
-                {Array.from({ length: colCount }).map((_, colIndex) => (
-                  <TableCell key={colIndex} className="p-0 border border-gray-100 min-w-[150px]">
-                    <Input value={row[colIndex] || ''} onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)} className="border-none focus-visible:ring-1 focus-visible:ring-blue-400 rounded-none h-11 text-sm px-3 shadow-none bg-transparent font-medium" />
-                  </TableCell>
-                ))}
+                {Array.from({ length: colCount }).map((_, colIndex) => {
+                  let key: string | number = colIndex;
+                  if (config.keys && config.keys[colIndex]) {
+                    key = config.keys[colIndex];
+                  } else if (config.columns && config.columns[colIndex]?.key) {
+                    key = config.columns[colIndex].key;
+                  }
+                  
+                  const isNoColumn = key === 'no' || (config.columns && (config.columns[colIndex]?.label?.toLowerCase() === 'no' || config.columns[colIndex]?.label?.toLowerCase() === 'no.'));
+                  
+                  if (isNoColumn) {
+                    return (
+                      <TableCell key={colIndex} className="bg-gray-50/50 border border-gray-200 text-center font-bold text-gray-500 text-xs w-12 sticky left-0 z-10">
+                        {rowIndex + 1}
+                      </TableCell>
+                    );
+                  }
+
+                  const cellValue = row[key] !== undefined ? row[key] : (row[colIndex] !== undefined ? row[colIndex] : '');
+
+                  return (
+                    <TableCell key={colIndex} className="p-0 border border-gray-100 min-w-[150px]">
+                      <Input value={cellValue} onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)} className="border-none focus-visible:ring-1 focus-visible:ring-blue-400 rounded-none h-11 text-sm px-3 shadow-none bg-transparent font-medium" />
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             ))
           )}

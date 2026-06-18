@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils"
 import type { ProdiWithDashboard } from "../hooks/useDashboard"
 
 export function DashboardChart({ prodis }: { prodis: ProdiWithDashboard[] }) {
-  const graphData = prodis.map((prodi) => {
+  const activeProdis = prodis.filter((p) => !p.isSafePeriod)
+  const graphData = activeProdis.map((prodi) => {
     const score = prodi.dashboard?.simulationScore || 0
     let color = "bg-[#ff6b6b]" // Perlu Perhatian <200
     if (score >= 200 && score < 301) color = "bg-[#ffd93d]" // Baik 200-300

@@ -17,6 +17,14 @@ export const getAllProdi = async (): Promise<Prodi[]> => {
   return response.data.data || [];
 };
 
+export const getMyProdi = async (): Promise<Prodi[]> => {
+  const response = await apiClient.get<ApiResponse<Prodi[]>>('/prodi/my-prodi');
+  if (response.data.status === 'error') {
+    throw new Error(response.data.message);
+  }
+  return response.data.data || [];
+};
+
 export const getProdiById = async (id: string): Promise<Prodi> => {
   const response = await apiClient.get<ApiResponse<Prodi>>(`/prodi/${id}`);
   if (response.data.status === 'error') {

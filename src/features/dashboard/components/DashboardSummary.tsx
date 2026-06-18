@@ -3,10 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ProdiWithDashboard } from "../hooks/useDashboard"
 
 export function DashboardSummary({ prodis }: { prodis: ProdiWithDashboard[] }) {
-  const prodiSelesai = prodis.filter((p) => p.status === "completed")
-  const prodiProgress = prodis.filter((p) => p.status === "in_progress")
-  const totalReady = prodiSelesai.length
-  const totalNeedAttention = prodiProgress.filter((p) => (p.dashboard?.simulationScore || 0) < 200).length
+  const totalProdis = prodis.length
+  const sedangAkreditasi = prodis.filter((p) => !p.isSafePeriod).length
+  const masaAman = prodis.filter((p) => p.isSafePeriod).length
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -17,32 +16,32 @@ export function DashboardSummary({ prodis }: { prodis: ProdiWithDashboard[] }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 text-center">
-          <div className="text-4xl font-bold text-gray-900">{prodis.length}</div>
+          <div className="text-4xl font-bold text-gray-900">{totalProdis}</div>
           <p className="text-sm text-gray-500 mt-2 font-medium">Semua Program Studi</p>
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <Card className="rounded-xl border border-blue-100 bg-white shadow-sm overflow-hidden">
         <CardHeader className="px-6 py-5 border-b border-gray-100 bg-white text-center pb-4">
           <CardTitle className="text-sm font-bold text-gray-500 uppercase tracking-wider">
-            Prodi yang Siap
+            Sedang Akreditasi
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 text-center">
-          <div className="text-4xl font-bold text-gray-900">{totalReady}</div>
-          <p className="text-sm text-gray-500 mt-2 font-medium">Skor Simulasi ≥ 361</p>
+          <div className="text-4xl font-bold text-blue-600">{sedangAkreditasi}</div>
+          <p className="text-sm text-gray-500 mt-2 font-medium">Batas waktu ≤ 1.5 Tahun</p>
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border border-red-100 bg-white shadow-sm overflow-hidden">
+      <Card className="rounded-xl border border-emerald-100 bg-white shadow-sm overflow-hidden">
         <CardHeader className="px-6 py-5 border-b border-gray-100 bg-white text-center pb-4">
           <CardTitle className="text-sm font-bold text-gray-500 uppercase tracking-wider">
-            Prodi Perlu Perhatian
+            Masa Aman
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 text-center">
-          <div className="text-4xl font-bold text-red-600">{totalNeedAttention}</div>
-          <p className="text-sm text-gray-500 mt-2 font-medium">Skor Simulasi &lt; 200</p>
+          <div className="text-4xl font-bold text-emerald-600">{masaAman}</div>
+          <p className="text-sm text-gray-500 mt-2 font-medium">Batas waktu &gt; 1.5 Tahun</p>
         </CardContent>
       </Card>
     </div>

@@ -49,12 +49,12 @@ export function useLKPSHistory(prodiId: string) {
     try {
       const res = await apiClient.get(`/lkps/${activeVersionId}`)
       const docContent = res.data.data.content
-      const { getTableConfig } = await import('@/features/lkps/config/tableConfigs')
+      const configRes = await apiClient.get(`/lkps/config-all`)
+      const globalConfig = configRes.data.data
       const { exportToExcel } = await import('@/features/lkps/utils/exportUtils')
-      const { getSheetNamesByFormat } = await import('@/features/lkps/config/lkpsFormat')
       
       const convertedData: Record<string, any[]> = {}
-      const SHEETS = getSheetNamesByFormat(format)
+      const SHEETS = globalConfig.formats[format] || []
       
       if (docContent && typeof docContent === 'object') {
         for (const sheet of SHEETS) {
@@ -65,10 +65,10 @@ export function useLKPSHistory(prodiId: string) {
             } else if (Array.isArray(sheetData[0])) {
               convertedData[sheet] = sheetData
             } else {
-              const sheetConfig = getTableConfig(sheet, format)
+              const sheetConfig = globalConfig.tableConfigs[sheet]
               convertedData[sheet] = sheetData.map((row: any) => {
                 if (typeof row !== 'object' || row === null) return []
-                if (sheetConfig?.columns?.length > 0) return sheetConfig.columns.map((column: any) => row[column.key] ?? '')
+                if (sheetConfig?.columns?.length > 0) return sheetConfig.keys.map((key: string) => row[key] ?? '')
                 return Object.keys(row).map((key) => row[key] ?? '')
               })
             }
@@ -76,7 +76,7 @@ export function useLKPSHistory(prodiId: string) {
         }
       }
       
-      await exportToExcel(convertedData)
+      await exportToExcel(convertedData, globalConfig.tableConfigs)
       toast({ title: "Unduhan Berhasil", description: "File LKPS telah berhasil diunduh." })
     } catch (err) { toast({ variant: "destructive", title: "Unduhan Gagal", description: "Terjadi kesalahan." }) }
   }

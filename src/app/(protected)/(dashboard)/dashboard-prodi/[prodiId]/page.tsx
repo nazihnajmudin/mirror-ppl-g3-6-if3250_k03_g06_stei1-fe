@@ -52,8 +52,8 @@ export default function DashboardProdiPage() {
           </div>
         ) : (
           <>
-            <ProdiStatusCards dashboard={dashboard} />
-            <ProdiMainContent {...detailLogic} />
+            <ProdiStatusCards dashboard={dashboard} isSafePeriod={detailLogic.isSafePeriod} />
+            <ProdiMainContent {...detailLogic} isSafePeriod={detailLogic.isSafePeriod} />
           </>
         )
       )}

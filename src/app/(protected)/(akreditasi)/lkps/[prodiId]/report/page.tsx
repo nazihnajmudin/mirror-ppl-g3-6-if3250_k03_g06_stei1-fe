@@ -3,14 +3,13 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { SheetData, useReportStore } from '@/features/lkps/store/useReportStore'
-import { getTableConfig } from '@/features/lkps/config/tableConfigs'
+import { useLKPSConfig } from '@/features/lkps/hooks/useLKPSConfig'
 import { exportToExcel } from '@/features/lkps/utils/exportUtils'
 import { Download, FileSpreadsheet, RefreshCw, ArrowLeft, Loader2, Save, Plus, Trash2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import apiClient from '@/lib/api-client'
 import SimpleGrid from '@/features/lkps/components/SimpleGrid'
-import { getSheetNamesByFormat } from '@/features/lkps/config/lkpsFormat'
 
 function ReportContent({ prodiId }: { prodiId: string }) {
   const [activeSheet, setActiveSheet] = useState('2a1')
@@ -19,8 +18,8 @@ function ReportContent({ prodiId }: { prodiId: string }) {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [format, setFormat] = useState<'INFOKOM' | 'TEKNIK'>('INFOKOM')
-  const [backendConfigs, setBackendConfigs] = useState<Record<string, any>>({})
   const { data, setData, resetData, updateSheetData } = useReportStore()
+  const { config: globalConfig, loading: configLoading, getSheetNamesByFormat } = useLKPSConfig()
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const versionId = searchParams.get('versionId')
@@ -28,12 +27,12 @@ function ReportContent({ prodiId }: { prodiId: string }) {
   const SHEETS = getSheetNamesByFormat(format)
 
   const getMergedConfig = (sheetName: string) => {
-    const frontendConfig = getTableConfig(sheetName, format)
-    const backendConfig = backendConfigs[sheetName]
-    if (backendConfig && backendConfig.columns) {
-      return { ...frontendConfig, columnLabels: backendConfig.columns.map((col: any) => col.label || col.key), columns: backendConfig.columns }
+    return globalConfig?.tableConfigs?.[sheetName] || {
+      columns: [],
+      columnLabels: [],
+      startRow: 1,
+      startCol: 2
     }
-    return frontendConfig
   }
 
   const convertToArrayFormat = (sheetData: any[], sheetConfig: any): any[] => {
@@ -41,14 +40,14 @@ function ReportContent({ prodiId }: { prodiId: string }) {
     if (Array.isArray(sheetData[0])) return sheetData
     return sheetData.map(row => {
       if (typeof row !== 'object' || row === null) return []
-      if (sheetConfig?.columns?.length > 0) return sheetConfig.columns.map((column: any) => row[column.key] ?? '')
+      if (sheetConfig?.columns?.length > 0) return sheetConfig.keys.map((key: string) => row[key] ?? '')
       return Object.keys(row).map((key) => row[key] ?? '')
     })
   }
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!versionId) return
+      if (!versionId || !globalConfig) return
       setIsLoading(true); setErrorMsg(null)
       try {
         let currentFormat: 'INFOKOM' | 'TEKNIK' = 'INFOKOM'
@@ -66,10 +65,10 @@ function ReportContent({ prodiId }: { prodiId: string }) {
         const docContent = res.data.data.content
         if (docContent && typeof docContent === 'object') {
           const convertedData: Record<string, any[]> = {}
-          const currentSheets = getSheetNamesByFormat(currentFormat)
+          const currentSheets = globalConfig.formats[currentFormat] || []
           for (const sheet of currentSheets) {
             if (Array.isArray(docContent[sheet])) {
-              convertedData[sheet] = convertToArrayFormat(docContent[sheet], getTableConfig(sheet, currentFormat))
+              convertedData[sheet] = convertToArrayFormat(docContent[sheet], globalConfig.tableConfigs[sheet])
             }
           }
           setData(convertedData)
@@ -80,11 +79,12 @@ function ReportContent({ prodiId }: { prodiId: string }) {
       finally { setIsLoading(false) }
     }
     fetchData()
-  }, [versionId, prodiId, setData])
+  }, [versionId, prodiId, setData, globalConfig])
 
   const handleExport = async () => {
+    if (!globalConfig) return
     setIsExporting(true)
-    try { await exportToExcel(data); toast({ title: "Export Berhasil", description: "File Excel diunduh." }) } 
+    try { await exportToExcel(data, globalConfig.tableConfigs); toast({ title: "Export Berhasil", description: "File Excel diunduh." }) } 
     catch { toast({ variant: "destructive", title: "Gagal" }) } 
     finally { setIsExporting(false) }
   }
@@ -111,7 +111,7 @@ function ReportContent({ prodiId }: { prodiId: string }) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-sm shrink-0">
         <div className="flex items-center space-x-6">
           <button onClick={() => window.history.back()} className="flex items-center text-gray-500 hover:text-gray-900 font-bold text-xs gap-2 transition-colors">

@@ -20,7 +20,7 @@ export function TemplateDokumenMain({
   logic: any
 }) {
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 w-full">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">
           Manajemen Template Dokumen
@@ -64,7 +64,7 @@ export function TemplateDokumenMain({
             </CardHeader>
 
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <TemplateCard
                   category={category}
                   type="LKPS"

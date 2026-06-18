@@ -17,6 +17,7 @@ interface ProdiWithDashboard extends ProdiOption {
     simulationScore?: number
   }
   status?: "completed" | "in_progress"
+  isSafePeriod?: boolean
 }
 
 export default function InstitusiDashboard() {
@@ -303,52 +304,66 @@ export default function InstitusiDashboard() {
                     {activeTab === "Progress" && (
                       <>
                         <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-2.5">
-                            <Image
-                              src="/icon/dashboard-progress.svg"
-                              alt="Ikon Progress"
-                              width={16}
-                              height={16}
-                              className="flex-shrink-0 opacity-80"
-                            />
-                            <span className="text-[12px] font-bold text-gray-700 w-8">
-                              {prodi.dashboard?.documents?.lkps?.progress || 0}%
+                          {prodi.isSafePeriod ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                              Masa Aman
                             </span>
-                            <div className="h-2 w-24 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                              <div
-                                className="h-full bg-gray-900 rounded-full"
-                                style={{ width: `${prodi.dashboard?.documents?.lkps?.progress || 0}%` }}
+                          ) : (
+                            <div className="flex items-center gap-2.5">
+                              <Image
+                                src="/icon/dashboard-progress.svg"
+                                alt="Ikon Progress"
+                                width={16}
+                                height={16}
+                                className="flex-shrink-0 opacity-80"
                               />
+                              <span className="text-[12px] font-bold text-gray-700 w-8">
+                                {prodi.dashboard?.documents?.lkps?.progress || 0}%
+                              </span>
+                              <div className="h-2 w-24 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                                <div
+                                  className="h-full bg-gray-900 rounded-full"
+                                  style={{ width: `${prodi.dashboard?.documents?.lkps?.progress || 0}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-2.5">
-                            <Image
-                              src="/icon/dashboard-progress.svg"
-                              alt="Ikon Progress"
-                              width={16}
-                              height={16}
-                              className="flex-shrink-0 opacity-80"
-                            />
-                            <span className="text-[12px] font-bold text-gray-700 w-8">
-                              {prodi.dashboard?.documents?.led?.progress || 0}%
-                            </span>
-                            <div className="h-2 w-24 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                              <div
-                                className="h-full bg-gray-900 rounded-full"
-                                style={{ width: `${prodi.dashboard?.documents?.led?.progress || 0}%` }}
+                          {prodi.isSafePeriod ? (
+                            <span className="text-[12px] font-bold text-gray-400 pl-4">-</span>
+                          ) : (
+                            <div className="flex items-center gap-2.5">
+                              <Image
+                                src="/icon/dashboard-progress.svg"
+                                alt="Ikon Progress"
+                                width={16}
+                                height={16}
+                                className="flex-shrink-0 opacity-80"
                               />
+                              <span className="text-[12px] font-bold text-gray-700 w-8">
+                                {prodi.dashboard?.documents?.led?.progress || 0}%
+                              </span>
+                              <div className="h-2 w-24 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                                <div
+                                  className="h-full bg-gray-900 rounded-full"
+                                  style={{ width: `${prodi.dashboard?.documents?.led?.progress || 0}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </TableCell>
                       </>
                     )}
 
                     <TableCell className="px-6 py-4 text-right">
-                      <span className="text-[15px] font-bold text-gray-900">
-                        {prodi.dashboard?.simulationScore || 0}
-                      </span>
+                      {prodi.isSafePeriod ? (
+                        <span className="text-[14px] font-bold text-gray-400">-</span>
+                      ) : (
+                        <span className="text-[15px] font-bold text-gray-900">
+                          {prodi.dashboard?.simulationScore || 0}
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
