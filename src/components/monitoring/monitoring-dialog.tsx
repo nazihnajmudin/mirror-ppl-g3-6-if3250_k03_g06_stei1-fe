@@ -33,6 +33,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DocumentType = "LKPS" | "LED" | "EVIDEN";
 type MonitoringStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
@@ -102,6 +103,9 @@ export function MonitoringDialog({
   triggerClassName,
   compact = false,
 }: MonitoringDialogProps) {
+  const { user } = useAuth();
+  const isTimProdi = user?.role === "TIM_PRODI";
+
   const [open, setOpen] = useState(false);
 
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -180,6 +184,15 @@ export function MonitoringDialog({
     }
   };
 
+  const updateStatus = async (id: string, newStatus: MonitoringStatus) => {
+    try {
+      await apiClient.put(`/monitoring-evaluasi/${id}`, { status: newStatus });
+      await loadHistory();
+    } catch (error) {
+      console.error("Gagal mengubah status:", error);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
@@ -231,27 +244,25 @@ export function MonitoringDialog({
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto px-8 py-6">
             <div
-              className="
-                grid
-                grid-cols-1
-                xl:grid-cols-[1.7fr_1fr]
-                gap-8
-                min-h-full
-              "
+              className={cn(
+                "grid gap-8 min-h-full",
+                isTimProdi ? "grid-cols-1" : "grid-cols-1 xl:grid-cols-[1.7fr_1fr]"
+              )}
             >
               {/* LEFT CARD */}
-              <div
-                className="
-                  rounded-2xl
-                  border
-                  bg-gray-50
-                  p-6
-                  min-w-0
-                  flex
-                  flex-col
-                "
-              >
-                <form
+              {!isTimProdi && (
+                <div
+                  className="
+                    rounded-2xl
+                    border
+                    bg-gray-50
+                    p-6
+                    min-w-0
+                    flex
+                    flex-col
+                  "
+                >
+                  <form
                   id="monitoring-form"
                   onSubmit={handleSubmit}
                   className="space-y-6"
@@ -403,6 +414,7 @@ export function MonitoringDialog({
                   </div>
                 </form>
               </div>
+              )}
 
               {/* RIGHT CARD */}
               <div
@@ -456,17 +468,35 @@ export function MonitoringDialog({
                                 {item.indicatorName}
                               </span>
 
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "border-0",
-                                  statusBadgeClass(
-                                    item.status
-                                  )
-                                )}
-                              >
-                                {item.status}
-                              </Badge>
+                              {isTimProdi ? (
+                                <Select
+                                  value={item.status}
+                                  onValueChange={(value) => updateStatus(item.id, value as MonitoringStatus)}
+                                >
+                                  <SelectTrigger className={cn("h-6 border-0 text-xs px-2 min-w-[100px]", statusBadgeClass(item.status))}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {statusOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value} className="text-xs">
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "border-0",
+                                    statusBadgeClass(
+                                      item.status
+                                    )
+                                  )}
+                                >
+                                  {item.status}
+                                </Badge>
+                              )}
                             </div>
 
                             <div className="mt-2 space-y-1 text-xs text-gray-500">
@@ -532,7 +562,8 @@ export function MonitoringDialog({
         </div>
 
         {/* FOOTER */}
-        <div className="border-t bg-white px-8 py-4 shrink-0">
+        {!isTimProdi && (
+          <div className="border-t bg-white px-8 py-4 shrink-0">
           <div className="flex justify-end gap-3">
             <Button
               type="button"
@@ -558,6 +589,7 @@ export function MonitoringDialog({
             </Button>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
